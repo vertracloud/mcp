@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.1](https://github.com/vertracloud/mcp/compare/v0.1.0...v0.1.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* bump @vertracloud/api-types to 0.2.1 ([6f430aa](https://github.com/vertracloud/mcp/commit/6f430aa8df13f3a6187082eef28ce8baaba36fe5))
+* drop resource-organization segment from folder and favorite routes ([5dab1a2](https://github.com/vertracloud/mcp/commit/5dab1a2039e8dd50deac854dcf9ca048fc82885f))
+* regenerate lockfile to drop stale cross-repo entries ([aa393a1](https://github.com/vertracloud/mcp/commit/aa393a1b5cc1b6a8ab099af078b9e15e343e983b))
+
 ## 0.1.0 (2026-09-23)
 
 
