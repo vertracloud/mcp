@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, test } from "vitest";
@@ -40,6 +40,18 @@ test("upload_files não consegue ler arquivo fora da raiz", async () => {
 	assert.equal(result.isError, true);
 	assert.equal((parseResult(result) as { code: string }).code, "PATH_OUTSIDE_ROOT");
 	assert.equal(calls.length, 0, "nada pode ter ido para a rede");
+});
+
+test("symlink de diretório para fora da raiz é recusado, mesmo lexicalmente dentro", () => {
+	const outside = mkdtempSync(join(tmpdir(), "vertra-mcp-outside-"));
+	writeFileSync(join(outside, "secret.txt"), "segredo");
+	symlinkSync(outside, join(root, "link"));
+
+	assert.throws(() => ensureInsideRoot("link/secret.txt"), (err: LocalError) => err.code === "PATH_OUTSIDE_ROOT");
+	assert.throws(
+		() => zipFiles([join(root, "link", "secret.txt")]),
+		(err: LocalError) => err.code === "PATH_OUTSIDE_ROOT",
+	);
 });
 
 test("zipFiles aceita arquivo dentro da raiz", () => {

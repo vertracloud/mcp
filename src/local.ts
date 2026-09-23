@@ -3,7 +3,7 @@
  * Every path comes from the user/agent; nothing the API returns is used to build a path.
  */
 import AdmZip from "adm-zip";
-import { lstatSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
@@ -71,7 +71,34 @@ export function allowedRoot(): string {
 	return root;
 }
 
-/** Resolves the path and rejects anything outside the allowed root. */
+function realOrSelf(path: string): string {
+	try {
+		return realpathSync(path);
+	} catch {
+		return path;
+	}
+}
+
+/** Closest existing ancestor of `path` (itself if it exists), for resolving symlinks on a write target that doesn't exist yet. */
+function existingAncestor(path: string): string {
+	let current = path;
+	while (true) {
+		try {
+			statSync(current);
+			return current;
+		} catch {
+			const parent = dirname(current);
+			if (parent === current) return current;
+			current = parent;
+		}
+	}
+}
+
+/**
+ * Resolves the path and rejects anything outside the allowed root — including a path that only
+ * escapes once symlinks are followed (an intermediate folder inside root symlinked elsewhere).
+ * `path.resolve` alone is lexical and would miss that.
+ */
 export function ensureInsideRoot(path: string): string {
 	const root = allowedRoot();
 	const full = resolve(root, path);
@@ -80,6 +107,11 @@ export function ensureInsideRoot(path: string): string {
 	}
 	if (full.split(sep).some((part) => NEVER_READ.includes(part))) {
 		throw new LocalError("PATH_NOT_ALLOWED", `${full} is inside a system credentials folder.`);
+	}
+	const realRoot = realOrSelf(root);
+	const realAncestor = realOrSelf(existingAncestor(full));
+	if (realAncestor !== realRoot && !realAncestor.startsWith(realRoot + sep)) {
+		throw new LocalError("PATH_OUTSIDE_ROOT", `${full} is outside the allowed folder (${root}).`);
 	}
 	return full;
 }
