@@ -16,20 +16,20 @@ const body = (value: unknown): unknown => (typeof value === "string" ? JSON.pars
 
 test("registra as tools de organização com rotas e scopes explícitos por escopo", () => {
 	const expected: Array<[string, string, string, string]> = [
-		["create_personal_folder", "POST", "/v1/users/me/resource-organization/folders", "account:write"],
-		["update_personal_folder", "PATCH", "/v1/users/me/resource-organization/folders/:folder_id", "account:write"],
-		["delete_personal_folder", "DELETE", "/v1/users/me/resource-organization/folders/:folder_id", "account:write"],
-		["add_personal_resource_to_folder", "PUT", "/v1/users/me/resource-organization/folders/:folder_id/resources/:resource_type/:resource_id", "account:write"],
-		["remove_personal_resource_from_folder", "DELETE", "/v1/users/me/resource-organization/folders/:folder_id/resources/:resource_type/:resource_id", "account:write"],
-		["favorite_personal_resource", "PUT", "/v1/users/me/resource-organization/favorites/:resource_type/:resource_id", "account:write"],
-		["unfavorite_personal_resource", "DELETE", "/v1/users/me/resource-organization/favorites/:resource_type/:resource_id", "account:write"],
-		["create_workspace_folder", "POST", "/v1/workspaces/:id/resource-organization/folders", "workspaces:write"],
-		["update_workspace_folder", "PATCH", "/v1/workspaces/:id/resource-organization/folders/:folder_id", "workspaces:write"],
-		["delete_workspace_folder", "DELETE", "/v1/workspaces/:id/resource-organization/folders/:folder_id", "workspaces:write"],
-		["add_workspace_resource_to_folder", "PUT", "/v1/workspaces/:id/resource-organization/folders/:folder_id/resources/:resource_type/:resource_id", "workspaces:write"],
-		["remove_workspace_resource_from_folder", "DELETE", "/v1/workspaces/:id/resource-organization/folders/:folder_id/resources/:resource_type/:resource_id", "workspaces:write"],
-		["favorite_workspace_resource", "PUT", "/v1/workspaces/:id/resource-organization/favorites/:resource_type/:resource_id", "workspaces:write"],
-		["unfavorite_workspace_resource", "DELETE", "/v1/workspaces/:id/resource-organization/favorites/:resource_type/:resource_id", "workspaces:write"],
+		["create_personal_folder", "POST", "/v1/users/me/folders", "account:write"],
+		["update_personal_folder", "PATCH", "/v1/users/me/folders/:folder_id", "account:write"],
+		["delete_personal_folder", "DELETE", "/v1/users/me/folders/:folder_id", "account:write"],
+		["add_personal_resource_to_folder", "PUT", "/v1/users/me/folders/:folder_id/resources/:resource_type/:resource_id", "account:write"],
+		["remove_personal_resource_from_folder", "DELETE", "/v1/users/me/folders/:folder_id/resources/:resource_type/:resource_id", "account:write"],
+		["favorite_personal_resource", "PUT", "/v1/users/me/favorites/:resource_type/:resource_id", "account:write"],
+		["unfavorite_personal_resource", "DELETE", "/v1/users/me/favorites/:resource_type/:resource_id", "account:write"],
+		["create_workspace_folder", "POST", "/v1/workspaces/:id/folders", "workspaces:write"],
+		["update_workspace_folder", "PATCH", "/v1/workspaces/:id/folders/:folder_id", "workspaces:write"],
+		["delete_workspace_folder", "DELETE", "/v1/workspaces/:id/folders/:folder_id", "workspaces:write"],
+		["add_workspace_resource_to_folder", "PUT", "/v1/workspaces/:id/folders/:folder_id/resources/:resource_type/:resource_id", "workspaces:write"],
+		["remove_workspace_resource_from_folder", "DELETE", "/v1/workspaces/:id/folders/:folder_id/resources/:resource_type/:resource_id", "workspaces:write"],
+		["favorite_workspace_resource", "PUT", "/v1/workspaces/:id/favorites/:resource_type/:resource_id", "workspaces:write"],
+		["unfavorite_workspace_resource", "DELETE", "/v1/workspaces/:id/favorites/:resource_type/:resource_id", "workspaces:write"],
 	];
 
 	for (const [name, method, path, scope] of expected) {
@@ -47,7 +47,7 @@ test("cria pasta pessoal com apenas o corpo permitido", async () => {
 
 	assert.deepEqual(parseResult(result), { id: "folder-1" });
 	assert.equal(calls[0]?.method, "POST");
-	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/users/me/resource-organization/folders");
+	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/users/me/folders");
 	assert.deepEqual(body(calls[0]?.body), { name: "Produção", color: "blue", position: 2 });
 });
 
@@ -59,7 +59,7 @@ test("atualiza uma pasta de workspace com IDs escapados", async () => {
 	);
 
 	assert.equal(calls[0]?.method, "PATCH");
-	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/workspaces/ws%2F1/resource-organization/folders/folder%2F1");
+	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/workspaces/ws%2F1/folders/folder%2F1");
 	assert.deepEqual(body(calls[0]?.body), { name: "Novo nome", color: "green" });
 });
 
@@ -77,10 +77,10 @@ test("adiciona e remove recurso usando a rota tipada", async () => {
 	);
 
 	assert.equal(calls[0]?.method, "PUT");
-	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/users/me/resource-organization/folders/folder%2F1/resources/application/app%2F1");
+	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/users/me/folders/folder%2F1/resources/application/app%2F1");
 	assert.deepEqual(body(calls[0]?.body), { position: 3 });
 	assert.equal(calls[1]?.method, "DELETE");
-	assert.equal(calls[1]?.url, "https://api.vertracloud.app/v1/users/me/resource-organization/folders/folder%2F1/resources/application/app%2F1");
+	assert.equal(calls[1]?.url, "https://api.vertracloud.app/v1/users/me/folders/folder%2F1/resources/application/app%2F1");
 	assert.equal(calls[1]?.body, undefined);
 });
 
@@ -98,10 +98,10 @@ test("favorito de workspace usa o scope do workspace e não aceita origin", asyn
 	);
 
 	assert.equal(calls[0]?.method, "PUT");
-	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/workspaces/ws-1/resource-organization/favorites/database/db-1");
+	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/workspaces/ws-1/favorites/database/db-1");
 	assert.deepEqual(body(calls[0]?.body), {});
 	assert.equal(calls[1]?.method, "DELETE");
-	assert.equal(calls[1]?.url, "https://api.vertracloud.app/v1/users/me/resource-organization/favorites/database/db-1");
+	assert.equal(calls[1]?.url, "https://api.vertracloud.app/v1/users/me/favorites/database/db-1");
 });
 
 test("schemas estritos recusam campos desconhecidos, tipos e cores fora do contrato", () => {

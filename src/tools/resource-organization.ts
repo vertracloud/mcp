@@ -35,23 +35,23 @@ type OrganizationScope = "personal" | "workspace";
 
 function base(scope: OrganizationScope, args: Record<string, unknown>): string {
 	return scope === "personal"
-		? "/v1/users/me/resource-organization"
-		: `/v1/workspaces/${enc(args.workspace_id)}/resource-organization`;
+		? "/v1/users/me"
+		: `/v1/workspaces/${enc(args.workspace_id)}`;
 }
 
 function folderRoute(scope: OrganizationScope, method: "POST" | "PATCH" | "DELETE"): ["POST" | "PATCH" | "DELETE", string] {
 	const prefix = scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id";
-	return [method, `${prefix}/resource-organization/folders`];
+	return [method, `${prefix}/folders`];
 }
 
 function folderItemRoute(scope: OrganizationScope, method: "PUT" | "DELETE"): ["PUT" | "DELETE", string] {
 	const prefix = scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id";
-	return [method, `${prefix}/resource-organization/folders/:folder_id/resources/:resource_type/:resource_id`];
+	return [method, `${prefix}/folders/:folder_id/resources/:resource_type/:resource_id`];
 }
 
 function favoriteRoute(scope: OrganizationScope, method: "PUT" | "DELETE"): ["PUT" | "DELETE", string] {
 	const prefix = scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id";
-	return [method, `${prefix}/resource-organization/favorites/:resource_type/:resource_id`];
+	return [method, `${prefix}/favorites/:resource_type/:resource_id`];
 }
 
 function scopeInput(scope: OrganizationScope, shape: ZodRawShape): z.ZodObject<ZodRawShape> {
@@ -94,7 +94,7 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 			group,
 			route: [
 				"PATCH",
-				`${scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id"}/resource-organization/folders/:folder_id`,
+				`${scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id"}/folders/:folder_id`,
 			],
 			annotations: WI,
 			inputSchema: updateInput(scope, folderId),
@@ -109,7 +109,7 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 			group,
 			route: [
 				"DELETE",
-				`${scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id"}/resource-organization/folders/:folder_id`,
+				`${scope === "personal" ? "/v1/users/me" : "/v1/workspaces/:id"}/folders/:folder_id`,
 			],
 			annotations: D,
 			inputSchema: scopeInput(scope, { folder_id: folderId }),
