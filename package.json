@@ -1,6 +1,6 @@
 {
   "name": "@vertracloud/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official MCP server for Vertra Cloud: manage apps, databases and snapshots from Claude, Cursor or any MCP client.",
   "type": "module",
   "license": "MIT",
