@@ -1,0 +1,66 @@
+{
+  "name": "@vertracloud/mcp",
+  "version": "0.1.0",
+  "description": "Official MCP server for Vertra Cloud: manage apps, databases and snapshots from Claude, Cursor or any MCP client.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Vertra Cloud",
+  "homepage": "https://vertracloud.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vertracloud/mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vertracloud/mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model context protocol",
+    "vertra",
+    "vertracloud",
+    "paas",
+    "hosting",
+    "deploy",
+    "brazil"
+  ],
+  "bin": {
+    "vertracloud-mcp": "dist/stdio.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "docs:tools": "tsx scripts/gen-readme-tools.ts",
+    "prepublishOnly": "npm run build",
+    "smoke": "node scripts/smoke-stdio.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "@vertracloud/api-types": "0.2.0",
+    "adm-zip": "^0.5.16",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/node": "^22.10.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.1",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.11"
+  }
+}
