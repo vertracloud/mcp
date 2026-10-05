@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.2](https://github.com/vertracloud/mcp/compare/v0.1.1...v0.1.2) (2026-10-05)
+
+
+* release 0.1.2 ([2b30de1](https://github.com/vertracloud/mcp/commit/2b30de18b3e464b87269a1effaca19bf58aad827))
+
+
+### Features
+
+* billing details tool, build command and FREE_PLAN_SUSPENDED hints ([bc53de4](https://github.com/vertracloud/mcp/commit/bc53de4e6073242c885d6a9e43d59cf6f803812d))
+
 ## [0.1.1](https://github.com/vertracloud/mcp/compare/v0.1.0...v0.1.1) (2026-09-23)
 
 
