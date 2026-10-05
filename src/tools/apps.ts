@@ -125,7 +125,7 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "create_app",
 		description:
-			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it.",
+			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first.",
 		group: "apps",
 		route: ["POST", "/v1/apps"],
 		local: true,
@@ -139,6 +139,7 @@ export const appsTools: ToolDefinition[] = [
 			description: z.string().optional(),
 			subdomain: z.string().optional(),
 			start: z.string().optional().describe("Custom start command"),
+			build: z.string().optional().describe("Build command, run after install"),
 			workspace_id: z.string().optional(),
 		},
 		handler: (args, client) =>
@@ -150,7 +151,7 @@ export const appsTools: ToolDefinition[] = [
 				form.append("memory", String(args.memory));
 				form.append("main", String(args.main));
 				form.append("version", str(args.version) ?? "recommended");
-				for (const field of ["description", "subdomain", "start", "workspace_id"] as const) {
+				for (const field of ["description", "subdomain", "start", "build", "workspace_id"] as const) {
 					const value = str(args[field]);
 					if (value) form.append(field, value);
 				}
@@ -187,7 +188,7 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "update_app_config",
-		description: "Changes the application's configuration: name, memory, main file, runtime version, start command.",
+		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command.",
 		group: "apps",
 		route: ["PATCH", "/v1/apps/:id/config"],
 		annotations: WI,
@@ -199,6 +200,7 @@ export const appsTools: ToolDefinition[] = [
 			main: z.string().optional(),
 			version: z.string().optional(),
 			start: z.string().optional(),
+			build: z.string().optional().describe("Build command; empty string removes it"),
 			workspace_id: z.string().optional(),
 		},
 		handler: (args, client) => {
@@ -210,6 +212,7 @@ export const appsTools: ToolDefinition[] = [
 				...(args.memory !== undefined ? { ram: Number(args.memory) } : {}),
 				...(args.main !== undefined ? { main_file: String(args.main) } : {}),
 				...(args.start !== undefined ? { start_command: String(args.start) } : {}),
+				...(args.build !== undefined ? { build_command: String(args.build) || null } : {}),
 			};
 			return client
 				.patch(`/v1/apps/${enc(args.id)}/config`, body, { workspace_id: str(args.workspace_id) })

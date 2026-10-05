@@ -99,9 +99,9 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `start_app` | Turns the application on. | `apps:write` |  |
 | `restart_app` | Restarts the application. `reinstall_dependencies` reinstalls dependencies from scratch (ignoring the install cache); `force_build` runs the build command again even without a code change. Both count as a deploy against the plan's hourly limit. | `apps:write` |  |
 | `stop_app` | Turns the application off. | `apps:write` |  |
-| `create_app` | Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. | `apps:write` | yes |
+| `create_app` | Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first. | `apps:write` | yes |
 | `deploy_app` | Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`. | `apps:files` | yes |
-| `update_app_config` | Changes the application's configuration: name, memory, main file, runtime version, start command. | `apps:write` |  |
+| `update_app_config` | Changes the application's configuration: name, memory, main file, runtime version, start command, build command. | `apps:write` |  |
 | `download_app` | Downloads the application's files as a zip and writes it to the given path. | `apps:read` | yes |
 | `delete_app` | Permanently deletes the application, along with its files and configuration. | `apps:delete` |  |
 
@@ -154,7 +154,7 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `get_database` | Details of a database: engine, name, memory, address and port. | `databases:read` |  |
 | `get_database_status` | Live status (CPU, RAM, disk, uptime) of a database; without `id`, of all of them. | `databases:read` |  |
 | `get_database_metrics` | History of CPU, RAM, storage and network usage of the database. | `databases:read` |  |
-| `create_database` | Creates a managed database. | `databases:write` |  |
+| `create_database` | Creates a managed database. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first. | `databases:write` |  |
 | `update_database` | Changes the database's name, description or memory. | `databases:write` |  |
 | `start_database` | Turns the database on. | `databases:write` |  |
 | `stop_database` | Turns the database off. | `databases:write` |  |
@@ -228,7 +228,9 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | tool | what it does | scope | local only |
 |---|---|---|---|
 | `list_plans` | Plans and prices, straight from the public knowledge base (not from a route). | — |  |
-| `create_order` | Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. | `billing:write` |  |
+| `create_order` | Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. Requires complete billing details (name, address and, in Brazil, CPF/CNPJ); without them it fails with BILLING_DETAILS_INCOMPLETE — use `set_billing_details` after the user gives the data. Accounts on the suspended Free plan cannot create apps or databases until an order is paid. | `billing:write` |  |
+| `get_billing_details` | The account's billing details (name, address, phone, masked CPF/CNPJ) and `complete`, which says whether they are enough to create an order. `null` until saved. | `billing:read` |  |
+| `set_billing_details` | Replaces the account's billing details. SENDS THE USER'S PERSONAL DATA (name, address and CPF/CNPJ): use it only when the user provided these values in this conversation, never guess or invent them. In Brazil, `number`, `district`, `city_code` (7-digit IBGE), `state` and an 8-digit `postal_code` are required, plus `tax_id`; outside Brazil, `line1`, `city` and `postal_code`. Omitting `tax_id` keeps the saved one. | `billing:write` |  |
 | `get_pix` | Generates the order's PIX payment and returns the copy-and-paste code and the QR Code. THE PERSON PAYS, in their banking app — the agent never pays anything. | `billing:write` |  |
 | `get_order_status` | Status of an order; poll it periodically until it turns paid. | `billing:read` |  |
 | `list_orders` | The account's orders. | `billing:read` |  |

@@ -82,7 +82,7 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "create_database",
-		description: "Creates a managed database.",
+		description: "Creates a managed database. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first.",
 		group: "databases",
 		route: ["POST", "/v1/databases"],
 		annotations: W,

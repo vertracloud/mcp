@@ -45,6 +45,8 @@ test("nomes de tool são únicos e toda tool declara as três anotações", () =
 test("scopeForRoute devolve o escopo do catálogo e null fora dele", () => {
 	assert.equal(scopeForRoute("GET", "/v1/apps/:id/logs"), "apps:read");
 	assert.equal(scopeForRoute("POST", "/v1/orders"), "billing:write");
+	assert.equal(scopeForRoute("GET", "/v1/users/me/billing"), "billing:read");
+	assert.equal(scopeForRoute("PUT", "/v1/users/me/billing"), "billing:write");
 	assert.equal(scopeForRoute("DELETE", "/v1/users/me/sessions"), null);
 });
 
