@@ -101,7 +101,7 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `stop_app` | Turns the application off. | `apps:write` |  |
 | `create_app` | Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first. | `apps:write` | yes |
 | `deploy_app` | Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`. | `apps:files` | yes |
-| `update_app_config` | Changes the application's configuration: name, memory, main file, runtime version, start command, build command. | `apps:write` |  |
+| `update_app_config` | Changes the application's configuration: name, memory, main file, runtime version, start command, build command and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime "on" and auto rollback depend on the plan (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK). | `apps:write` |  |
 | `download_app` | Downloads the application's files as a zip and writes it to the given path. | `apps:read` | yes |
 | `delete_app` | Permanently deletes the application, along with its files and configuration. | `apps:delete` |  |
 
@@ -113,6 +113,10 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `get_deploy_webhook` | The application's automatic-deploy webhook URL. | `apps:read` |  |
 | `create_deploy_webhook` | Creates (or renews) the application's automatic-deploy webhook, from an already connected GitHub repository. | `apps:write` |  |
 | `delete_deploy_webhook` | Removes the automatic-deploy webhook; whoever was using the URL stops being able to deploy. | `apps:write` |  |
+| `list_releases` | The application's versions (releases), newest first: source, status, commit/upload message, author and whether a rollback to each one is available (`rollback.available`, `rollback.expires_at`). `limit` goes up to 50. | `apps:read` |  |
+| `get_release_log` | Crash log recorded for a release. `content` is null when there is no log or it has expired. | `apps:read` |  |
+| `preview_rollback` | Previews what restoring a release's environment variables would change, without changing anything: only variable names and the kind of change (added, modified, removed), never values. Call it before `rollback_app` with `restore_environment`. | `apps:envs` |  |
+| `rollback_app` | Rolls the application back to a previous release: its code goes back to that version and the application restarts. Data the application wrote while running is kept. Environment variables are kept as they are unless `restore_environment` is true, which also needs the `apps:envs` scope; run `preview_rollback` first in that case. Possible errors: PLAN_DOES_NOT_SUPPORT_ROLLBACK, RELEASE_EXPIRED, RELEASE_ALREADY_ACTIVE, RESTORE_COOLDOWN, OPERATION_IN_PROGRESS. | `apps:write` |  |
 
 #### Environment variables
 

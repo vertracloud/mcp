@@ -10,6 +10,7 @@ import { docsTools } from "./docs.js";
 import { envsTools } from "./envs.js";
 import { filesTools } from "./files.js";
 import { networkTools } from "./network.js";
+import { releasesTools } from "./releases.js";
 import { resourceOrganizationTools } from "./resource-organization.js";
 import { snapshotsTools } from "./snapshots.js";
 import { workspacesTools } from "./workspaces.js";
@@ -18,6 +19,7 @@ export const tools: ToolDefinition[] = [
 	...docsTools,
 	...appsTools,
 	...deploysTools,
+	...releasesTools,
 	...envsTools,
 	...filesTools,
 	...networkTools,

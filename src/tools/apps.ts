@@ -170,6 +170,7 @@ export const appsTools: ToolDefinition[] = [
 			id,
 			path: z.string().describe("Project folder on the computer"),
 			restart: z.boolean().optional().describe("Restart the application after upload (default: true)"),
+			message: z.string().max(500).optional().describe("Message shown in the release history (up to 500 characters)"),
 			workspace_id: z.string().optional(),
 		},
 		handler: (args, client) =>
@@ -178,6 +179,8 @@ export const appsTools: ToolDefinition[] = [
 				const form = new FormData();
 				form.append("file", new Blob([new Uint8Array(zip)]), `${fileName(String(args.path))}.zip`);
 				const restart = args.restart === undefined ? true : Boolean(args.restart);
+				const message = str(args.message);
+				if (message) form.append("message", message);
 				return respond(
 					await client.postMultipart(`/v1/apps/${enc(args.id)}/files/upload`, form, {
 						restart: String(restart),
@@ -188,7 +191,7 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "update_app_config",
-		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command.",
+		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime \"on\" and auto rollback depend on the plan (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK).",
 		group: "apps",
 		route: ["PATCH", "/v1/apps/:id/config"],
 		annotations: WI,
@@ -201,6 +204,15 @@ export const appsTools: ToolDefinition[] = [
 			version: z.string().optional(),
 			start: z.string().optional(),
 			build: z.string().optional().describe("Build command; empty string removes it"),
+			zero_downtime: z.enum(["auto", "on", "off"]).optional().describe("Deploy without downtime: auto, on or off"),
+			auto_rollback: z.boolean().optional().describe("Automatically roll back a deploy that fails to start"),
+			health_check_path: z
+				.string()
+				.max(200)
+				.regex(/^\/[\x21-\x7e]*$/)
+				.nullable()
+				.optional()
+				.describe("Health check path: starts with /, printable ASCII without spaces, up to 200 characters; null clears it"),
 			workspace_id: z.string().optional(),
 		},
 		handler: (args, client) => {
@@ -214,6 +226,8 @@ export const appsTools: ToolDefinition[] = [
 				...(args.start !== undefined ? { start_command: String(args.start) } : {}),
 				...(args.build !== undefined ? { build_command: String(args.build) || null } : {}),
 			};
+			const deploy = pick(args, ["zero_downtime", "auto_rollback", "health_check_path"]);
+			if (Object.keys(deploy).length) body.deploy = deploy as NonNullable<RESTPatchAPIApplicationUpdateConfigBody["deploy"]>;
 			return client
 				.patch(`/v1/apps/${enc(args.id)}/config`, body, { workspace_id: str(args.workspace_id) })
 				.then((r) => respond(r));
