@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/vertracloud/mcp/compare/v0.1.2...v0.1.3) (2026-10-12)
+
+
+### Features
+
+* **tools:** releases, rollback and deploy settings ([4946149](https://github.com/vertracloud/mcp/commit/4946149730ebba4f850d9473f6537f29eeaaed89))
+
 ## [0.1.2](https://github.com/vertracloud/mcp/compare/v0.1.1...v0.1.2) (2026-10-05)
 
 
