@@ -5,7 +5,9 @@
 			"release-type": "node",
 			"package-name": "@vertracloud/mcp",
 			"bump-minor-pre-major": true,
-			"extra-files": ["src/server.ts"],
+			"extra-files": [
+				"src/server.ts"
+			],
 			"changelog-sections": [
 				{
 					"type": "feat",
@@ -40,7 +42,8 @@
 					"type": "ci",
 					"hidden": true
 				}
-			]
+			],
+			"bump-patch-for-minor-pre-major": true
 		}
 	},
 	"include-component-in-tag": false
