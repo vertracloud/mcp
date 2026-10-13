@@ -85,7 +85,7 @@ export const billingTools: ToolDefinition[] = [
 	{
 		name: "get_pix",
 		description:
-			"Generates the order's PIX payment and returns the copy-and-paste code and the QR Code. THE PERSON PAYS, in their banking app — the agent never pays anything.",
+			"Generates the order's PIX payment and returns the copy-and-paste code and the QR Code. THE PERSON PAYS, in their banking app — the agent never pays anything. The QR expires at `expires_at` (up to 30 min); calling get_pix again for the same open order returns a fresh QR.",
 		group: "billing",
 		route: ["POST", "/v1/orders/:orderId/initiate/pix"],
 		annotations: W,
@@ -94,7 +94,7 @@ export const billingTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_order_status",
-		description: "Status of an order; poll it periodically until it turns paid.",
+		description: "Status of an order; poll it periodically until it turns paid. `expires_at` is when the unpaid order (invoice) expires, 72 h after creation.",
 		group: "billing",
 		route: ["GET", "/v1/orders/:orderId/status"],
 		annotations: R,

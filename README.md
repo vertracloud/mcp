@@ -235,8 +235,8 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `create_order` | Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. Requires complete billing details (name, address and, in Brazil, CPF/CNPJ); without them it fails with BILLING_DETAILS_INCOMPLETE — use `set_billing_details` after the user gives the data. Accounts on the suspended Free plan cannot create apps or databases until an order is paid. | `billing:write` |  |
 | `get_billing_details` | The account's billing details (name, address, phone, masked CPF/CNPJ) and `complete`, which says whether they are enough to create an order. `null` until saved. | `billing:read` |  |
 | `set_billing_details` | Replaces the account's billing details. SENDS THE USER'S PERSONAL DATA (name, address and CPF/CNPJ): use it only when the user provided these values in this conversation, never guess or invent them. In Brazil, `number`, `district`, `city_code` (7-digit IBGE), `state` and an 8-digit `postal_code` are required, plus `tax_id`; outside Brazil, `line1`, `city` and `postal_code`. Omitting `tax_id` keeps the saved one. | `billing:write` |  |
-| `get_pix` | Generates the order's PIX payment and returns the copy-and-paste code and the QR Code. THE PERSON PAYS, in their banking app — the agent never pays anything. | `billing:write` |  |
-| `get_order_status` | Status of an order; poll it periodically until it turns paid. | `billing:read` |  |
+| `get_pix` | Generates the order's PIX payment and returns the copy-and-paste code and the QR Code. THE PERSON PAYS, in their banking app — the agent never pays anything. The QR expires at `expires_at` (up to 30 min); calling get_pix again for the same open order returns a fresh QR. | `billing:write` |  |
+| `get_order_status` | Status of an order; poll it periodically until it turns paid. `expires_at` is when the unpaid order (invoice) expires, 72 h after creation. | `billing:read` |  |
 | `list_orders` | The account's orders. | `billing:read` |  |
 | `redeem_code` | Redeems a promotional code on the account. | `redeem:write` |  |
 
