@@ -3,7 +3,7 @@
  * Every path comes from the user/agent; nothing the API returns is used to build a path.
  */
 import AdmZip from "adm-zip";
-import { lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { constants, fstatSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
@@ -41,10 +41,8 @@ export class LocalError extends Error {
 }
 
 /**
- * `true` only when this process is the stdio transport on the user's own machine
- * (`createServer(key, { local: true })`). `apply_fix` uses this to reject `target: "local"`
- * on the remote server (`mcp.vertracloud.app`, no disk access at all) without needing a
- * second parameter threaded through the whole handler chain.
+ * `true` only for the stdio transport on the user's own machine. The remote server has no disk
+ * access; `apply_fix` checks this to reject `target: "local"`.
  */
 let localModeEnabled = false;
 export function setLocalMode(enabled: boolean): void {
@@ -55,9 +53,8 @@ export function isLocalMode(): boolean {
 }
 
 /**
- * Allowed root for reading and writing. Every local tool stays inside it: without this, text
- * read from the platform (a log, a file, a note) could get the agent to zip `~/.ssh` and upload it.
- * Default: the folder the server was started in. `VERTRA_MCP_ROOT` overrides it.
+ * Root for every local read and write. Without it, text from the platform (a log, a note) could
+ * make the agent zip `~/.ssh`. Defaults to the start folder; `VERTRA_MCP_ROOT` overrides it.
  */
 export function allowedRoot(): string {
 	const configured = process.env.VERTRA_MCP_ROOT;
@@ -95,9 +92,8 @@ function existingAncestor(path: string): string {
 }
 
 /**
- * Resolves the path and rejects anything outside the allowed root — including a path that only
- * escapes once symlinks are followed (an intermediate folder inside root symlinked elsewhere).
- * `path.resolve` alone is lexical and would miss that.
+ * Rejects paths outside the allowed root, including ones that escape through a symlinked folder.
+ * `path.resolve` alone is lexical and misses that.
  */
 export function ensureInsideRoot(path: string): string {
 	const root = allowedRoot();
@@ -141,7 +137,7 @@ function walk(dir: string, root: string, patterns: string[], out: string[]): voi
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name);
 		if (matchesIgnore(entry.name, patterns) || NEVER_READ.includes(entry.name)) continue;
-			// Symlinks are not followed: the zip only takes regular files.
+		// Symlinks are not followed: the zip only takes regular files.
 		if (entry.isDirectory()) walk(full, root, patterns, out);
 		else if (entry.isFile()) out.push(full);
 	}
@@ -197,6 +193,44 @@ export function writeLocalFile(dest: string, bytes: Uint8Array): { path: string;
 		throw err;
 	}
 	return { path: full, bytes: bytes.byteLength };
+}
+
+/**
+ * Reads one regular file inside the allowed root. `O_NOFOLLOW` plus `fstat` on the open descriptor:
+ * a symlink swapped in after the path check is refused, not followed.
+ */
+export function readLocalFile(path: string, maxBytes: number): { name: string; bytes: Buffer } {
+	const full = ensureInsideRoot(path);
+	let fd: number;
+	try {
+		fd = openSync(full, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+	} catch {
+		throw new LocalError("NOT_A_FILE", `${full} could not be opened as a regular file.`);
+	}
+	try {
+		const stat = fstatSync(fd);
+		if (!stat.isFile()) throw new LocalError("NOT_A_FILE", `${full} is not a regular file.`);
+		if (stat.size > maxBytes) {
+			throw new LocalError("FILE_TOO_LARGE", `${full} is ${stat.size} bytes; the limit for this tool is ${maxBytes}.`);
+		}
+		return { name: basename(full), bytes: readFileSync(fd) };
+	} finally {
+		closeSync(fd);
+	}
+}
+
+const SENSITIVE_NAME = /^(\.env(\..*)?|.*\.(pem|key|p12|pfx)|id_rsa.*|id_ed25519.*|\.npmrc|\.netrc|credentials)$/i;
+
+/**
+ * Secret files are refused as upload sources even inside the allowed root, since agent input can
+ * ask for them. Matched on the file name and on a `.git` path segment.
+ */
+export function assertNotSensitiveFile(path: string): void {
+	const segments = resolve(path).split(sep);
+	const name = segments[segments.length - 1] ?? "";
+	if (segments.includes(".git") || SENSITIVE_NAME.test(name)) {
+		throw new LocalError("SENSITIVE_FILE", `${name} looks like a secret or credential file and will not be uploaded.`);
+	}
 }
 
 export function fileName(path: string): string {

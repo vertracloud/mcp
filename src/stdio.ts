@@ -13,6 +13,10 @@ if (!apiKey) {
 	process.exit(1);
 }
 
-// `VERTRA_API_URL` only to point at a different environment; normal use leaves it unset.
-const server = createServer(apiKey, { local: true, baseUrl: process.env.VERTRA_API_URL });
+// `VERTRA_API_URL` / `VERTRA_BLOB_URL` only to point at a different environment; normal use leaves them unset.
+const server = createServer(apiKey, {
+	local: true,
+	baseUrl: process.env.VERTRA_API_URL,
+	blobBaseUrl: process.env.VERTRA_BLOB_URL,
+});
 await server.connect(new StdioServerTransport());

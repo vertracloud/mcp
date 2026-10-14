@@ -1,6 +1,8 @@
 /** HTTP client for the Vertra Cloud public API. No authorization logic of its own: the API key decides. */
 
 export const DEFAULT_BASE_URL = "https://api.vertracloud.app";
+/** Blob Storage API base URL, including `/v1`. */
+export const DEFAULT_BLOB_BASE_URL = "https://blob.vertracloud.app/v1";
 
 /** API error envelope (`{ code, message?, details? }`), plus whatever else is useful to the agent. */
 export interface ApiErrorBody {
@@ -21,6 +23,7 @@ export type FetchLike = typeof globalThis.fetch;
 
 export interface ClientOptions {
 	baseUrl?: string;
+	blobBaseUrl?: string;
 	fetch?: FetchLike;
 }
 
@@ -44,11 +47,18 @@ export class VertraClient {
 	readonly baseUrl: string;
 	private readonly apiKey: string;
 	private readonly fetchImpl: FetchLike;
+	private readonly blobBaseUrl: string;
 
 	constructor(apiKey: string, opts: ClientOptions = {}) {
 		this.apiKey = apiKey;
 		this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
 		this.fetchImpl = opts.fetch ?? globalThis.fetch;
+		this.blobBaseUrl = (opts.blobBaseUrl ?? DEFAULT_BLOB_BASE_URL).replace(/\/+$/, "");
+	}
+
+	/** Same key and fetch, pointed at the Blob Storage host. Tool paths are then `/objects`, `/stats`, ... */
+	blobClient(): VertraClient {
+		return new VertraClient(this.apiKey, { baseUrl: this.blobBaseUrl, fetch: this.fetchImpl });
 	}
 
 	private url(path: string, query?: Query): string {

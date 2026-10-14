@@ -4,6 +4,7 @@ import type { ToolDefinition } from "./defs.js";
 import { accountTools } from "./account.js";
 import { appsTools } from "./apps.js";
 import { billingTools } from "./billing.js";
+import { blobTools } from "./blob.js";
 import { databasesTools } from "./databases.js";
 import { deploysTools } from "./deploys.js";
 import { docsTools } from "./docs.js";
@@ -29,4 +30,5 @@ export const tools: ToolDefinition[] = [
 	...resourceOrganizationTools,
 	...workspacesTools,
 	...billingTools,
+	...blobTools,
 ];

@@ -18,6 +18,7 @@ const GROUP_TITLES: Record<ToolGroup, string> = {
 	account: "Account",
 	workspaces: "Workspaces",
 	billing: "Billing",
+	blob: "Blob storage",
 };
 
 export function renderToolsTable(): string {

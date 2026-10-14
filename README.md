@@ -240,6 +240,18 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `list_orders` | The account's orders. | `billing:read` |  |
 | `redeem_code` | Redeems a promotional code on the account. | `redeem:write` |  |
 
+#### Blob storage
+
+| tool | what it does | scope | local only |
+|---|---|---|---|
+| `list_blob_objects` | Lists the files of Blob Storage. Use `prefix` to look in a folder and `delimiter` "/" to get the folders back. | `blob:read` |  |
+| `get_blob_object` | Returns the details of one Blob Storage file: path, size, type, visibility and public URL. | `blob:read` |  |
+| `upload_blob` | Uploads a file from the computer to Blob Storage (up to 100 MB). Private by default. Secret and credential files (.env, keys, .git and the like) are refused. | `blob:write` | yes |
+| `delete_blob_object` | Deletes one file from Blob Storage. Its public URL stops working. | `blob:write` |  |
+| `blob_download_url` | Creates a temporary link to download a Blob Storage file, for private files too. The link cannot be revoked; it expires. | `blob:read` |  |
+| `blob_stats` | Blob Storage usage of the account: files, used and total space, and the limits of the plan. | `blob:read` |  |
+| `set_blob_visibility` | Changes a Blob Storage file between public and private. Public files get a permanent URL; private ones need a temporary link. | `blob:write` |  |
+
 <!-- tools:end -->
 
 ## Prompt ideas
