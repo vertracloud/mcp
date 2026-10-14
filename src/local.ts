@@ -30,7 +30,8 @@ export const DEFAULT_IGNORE = [
 const IGNORE_FILES = [".vertraignore", ".vertracloudignore"];
 
 /** System credential folders: never go into a zip, even inside the allowed root. */
-const NEVER_READ = [".ssh", ".aws", ".gnupg", ".kube", ".docker", ".npmrc", ".netrc", ".config"];
+const NEVER_READ = [".ssh", ".aws", ".gnupg", ".kube", ".docker", ".azure", ".gcloud", ".oci", ".npmrc", ".netrc", ".config"];
+const isNeverRead = (part: string) => NEVER_READ.includes(part.toLowerCase());
 
 export class LocalError extends Error {
 	code: string;
@@ -76,12 +77,12 @@ function realOrSelf(path: string): string {
 	}
 }
 
-/** Closest existing ancestor of `path` (itself if it exists), for resolving symlinks on a write target that doesn't exist yet. */
+/** Closest existing ancestor of `path` (itself if it exists, even as a dangling symlink), by lstat. */
 function existingAncestor(path: string): string {
 	let current = path;
 	while (true) {
 		try {
-			statSync(current);
+			lstatSync(current);
 			return current;
 		} catch {
 			const parent = dirname(current);
@@ -91,9 +92,20 @@ function existingAncestor(path: string): string {
 	}
 }
 
+/** `path` with every symlink resolved, also when its tail doesn't exist yet. A dangling symlink is refused. */
+function resolveReal(path: string): string {
+	const ancestor = existingAncestor(path);
+	try {
+		return join(realpathSync(ancestor), relative(ancestor, path));
+	} catch {
+		throw new LocalError("PATH_NOT_ALLOWED", `${path} is a broken symlink.`);
+	}
+}
+
 /**
  * Rejects paths outside the allowed root, including ones that escape through a symlinked folder.
- * `path.resolve` alone is lexical and misses that.
+ * Returns the path with the folders resolved: use that one to open, so the checked path and the
+ * accessed path are the same. The last component stays unresolved; readers refuse a symlink there.
  */
 export function ensureInsideRoot(path: string): string {
 	const root = allowedRoot();
@@ -101,15 +113,20 @@ export function ensureInsideRoot(path: string): string {
 	if (full !== root && !full.startsWith(root + sep)) {
 		throw new LocalError("PATH_OUTSIDE_ROOT", `${full} is outside the allowed folder (${root}).`);
 	}
-	if (full.split(sep).some((part) => NEVER_READ.includes(part))) {
+	const realRoot = realOrSelf(root);
+	// Where the path really lands, following every link, and the same with the last component kept.
+	const target = resolveReal(full);
+	const safe = join(resolveReal(dirname(full)), basename(full));
+	for (const real of [target, safe]) {
+		if (real !== realRoot && !real.startsWith(realRoot + sep)) {
+			throw new LocalError("PATH_OUTSIDE_ROOT", `${full} is outside the allowed folder (${root}).`);
+		}
+	}
+	// Both the typed path and the resolved ones, so a symlink can't hide a credentials folder.
+	if ([full, target, safe].some((p) => p.split(sep).some(isNeverRead))) {
 		throw new LocalError("PATH_NOT_ALLOWED", `${full} is inside a system credentials folder.`);
 	}
-	const realRoot = realOrSelf(root);
-	const realAncestor = realOrSelf(existingAncestor(full));
-	if (realAncestor !== realRoot && !realAncestor.startsWith(realRoot + sep)) {
-		throw new LocalError("PATH_OUTSIDE_ROOT", `${full} is outside the allowed folder (${root}).`);
-	}
-	return full;
+	return safe;
 }
 
 function loadUserIgnore(dir: string): string[] {
@@ -136,7 +153,7 @@ function matchesIgnore(name: string, patterns: string[]): boolean {
 function walk(dir: string, root: string, patterns: string[], out: string[]): void {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name);
-		if (matchesIgnore(entry.name, patterns) || NEVER_READ.includes(entry.name)) continue;
+		if (matchesIgnore(entry.name, patterns) || isNeverRead(entry.name)) continue;
 		// Symlinks are not followed: the zip only takes regular files.
 		if (entry.isDirectory()) walk(full, root, patterns, out);
 		else if (entry.isFile()) out.push(full);
@@ -200,6 +217,7 @@ export function writeLocalFile(dest: string, bytes: Uint8Array): { path: string;
  * a symlink swapped in after the path check is refused, not followed.
  */
 export function readLocalFile(path: string, maxBytes: number): { name: string; bytes: Buffer } {
+	assertNotSensitiveFile(path);
 	const full = ensureInsideRoot(path);
 	let fd: number;
 	try {
@@ -219,17 +237,35 @@ export function readLocalFile(path: string, maxBytes: number): { name: string; b
 	}
 }
 
-const SENSITIVE_NAME = /^(\.env(\..*)?|.*\.(pem|key|p12|pfx)|id_rsa.*|id_ed25519.*|\.npmrc|\.netrc|credentials)$/i;
+const SENSITIVE_NAME = new RegExp(
+	"^(" +
+		[
+			"\\.env(\\..*)?",
+			".*\\.(pem|key|p12|pfx|ppk|jks|keystore|kdbx|gpg|tfstate|tfvars)",
+			"id_(rsa|dsa|ecdsa|ed25519).*",
+			"\\.(npmrc|yarnrc|netrc|pgpass|pypirc|htpasswd|dockercfg|git-credentials|vault-token|my\\.cnf|s3cfg)",
+			"credentials(\\..*)?",
+			"kubeconfig",
+			"service[-_]?account.*\\.json",
+			"secrets?\\.(json|ya?ml|toml)",
+		].join("|") +
+		")$",
+	"i",
+);
 
 /**
  * Secret files are refused as upload sources even inside the allowed root, since agent input can
- * ask for them. Matched on the file name and on a `.git` path segment.
+ * ask for them. Checked on the typed path (resolved from the same root the read uses) and on the
+ * symlink-resolved one, on the file name and on a `.git` path segment.
  */
 export function assertNotSensitiveFile(path: string): void {
-	const segments = resolve(path).split(sep);
-	const name = segments[segments.length - 1] ?? "";
-	if (segments.includes(".git") || SENSITIVE_NAME.test(name)) {
-		throw new LocalError("SENSITIVE_FILE", `${name} looks like a secret or credential file and will not be uploaded.`);
+	const full = resolve(allowedRoot(), path);
+	for (const candidate of [full, realOrSelf(full)]) {
+		const segments = candidate.split(sep);
+		const name = segments[segments.length - 1] ?? "";
+		if (segments.some((s) => s.toLowerCase() === ".git") || SENSITIVE_NAME.test(name)) {
+			throw new LocalError("SENSITIVE_FILE", `${name} looks like a secret or credential file and will not be uploaded.`);
+		}
 	}
 }
 

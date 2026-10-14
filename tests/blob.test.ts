@@ -112,7 +112,8 @@ test("upload_blob envia o arquivo do disco como multipart, privado por padrão",
 test("upload_blob recusa arquivo sensível pelo nome, sem tocar na rede", async () => {
 	mkdirSync(join(root, ".git"));
 	mkdirSync(join(root, "app"));
-	const names = [".env", ".env.production", "server.pem", "tls.key", "id_rsa", "id_rsa.pub", "id_ed25519", "cert.p12", "cert.pfx", ".npmrc", ".netrc", "credentials", ".git/config", "app/.ENV"];
+	mkdirSync(join(root, "app", ".GIT"));
+	const names = [".env", ".env.production", "server.pem", "tls.key", "id_rsa", "id_rsa.pub", "id_ed25519", "cert.p12", "cert.pfx", ".npmrc", ".netrc", "credentials", ".git/config", "app/.ENV", ".git-credentials", ".pgpass", ".pypirc", ".htpasswd", ".dockercfg", ".vault-token", ".my.cnf", ".s3cfg", "terraform.tfstate", "prod.tfvars", "service-account.json", "kubeconfig", "id_ecdsa", "id_dsa", "release.jks", "vault.kdbx", "secrets.yaml", "app/.GIT/HEAD"];
 	for (const name of names) writeFileSync(join(root, name), "x");
 	const { fetch, calls } = stubFetch({ body: {} });
 	for (const name of names) {
@@ -152,4 +153,29 @@ test("readLocalFile recusa arquivo acima do limite e symlink", () => {
 
 test("o limite de envio simples é 100 MB", () => {
 	assert.equal(MAX_SIMPLE_UPLOAD_BYTES, 100 * 1024 * 1024);
+});
+
+test("upload_blob recusa arquivo sensível alcançado por symlink de pasta, sem tocar na rede", async () => {
+	mkdirSync(join(root, ".git"));
+	writeFileSync(join(root, ".git", "config"), "x");
+	symlinkSync(join(root, ".git"), join(root, "innocent"));
+	const { fetch, calls } = stubFetch({ body: {} });
+	const result = await tool("upload_blob").handler({ file: "innocent/config" }, new VertraClient("k", { fetch }));
+	assert.equal(result.isError, true);
+	assert.equal((parseResult(result) as { code: string }).code, "SENSITIVE_FILE");
+	assert.equal(calls.length, 0);
+});
+
+test("upload_blob recusa pasta de credencial de nuvem", async () => {
+	mkdirSync(join(root, ".azure"));
+	writeFileSync(join(root, ".azure", "accessTokens.json"), "x");
+	const { fetch, calls } = stubFetch({ body: {} });
+	const result = await tool("upload_blob").handler({ file: ".azure/accessTokens.json" }, new VertraClient("k", { fetch }));
+	assert.equal(result.isError, true);
+	assert.equal(calls.length, 0);
+});
+
+test("upload_blob pode sobrescrever objeto, então é anotada como destrutiva", () => {
+	assert.equal(tool("upload_blob").annotations.readOnlyHint, false);
+	assert.equal(tool("upload_blob").annotations.destructiveHint, true);
 });

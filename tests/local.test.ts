@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, test } from "vitest";
@@ -24,7 +24,7 @@ afterEach(() => {
 test("caminho fora da raiz permitida é recusado", () => {
 	assert.throws(() => ensureInsideRoot("/etc/passwd"), (err: LocalError) => err.code === "PATH_OUTSIDE_ROOT");
 	assert.throws(() => ensureInsideRoot("../../fora.txt"), (err: LocalError) => err.code === "PATH_OUTSIDE_ROOT");
-	assert.equal(ensureInsideRoot("dentro.txt"), join(root, "dentro.txt"));
+	assert.equal(ensureInsideRoot("dentro.txt"), join(realpathSync(root), "dentro.txt"));
 });
 
 test("pasta de credencial dentro da raiz também é recusada", () => {
@@ -63,4 +63,30 @@ test("download não sobrescreve arquivo existente", () => {
 	const dest = join(root, "app.zip");
 	writeLocalFile(dest, new Uint8Array([1, 2, 3]));
 	assert.throws(() => writeLocalFile(dest, new Uint8Array([4])), (err: LocalError) => err.code === "DEST_EXISTS");
+});
+
+test("symlink interno para pasta de credencial não escapa da denylist", () => {
+	mkdirSync(join(root, ".ssh"));
+	writeFileSync(join(root, ".ssh", "id_ed25519"), "x");
+	symlinkSync(join(root, ".ssh"), join(root, "innocent"));
+	assert.throws(() => ensureInsideRoot("innocent/id_ed25519"), (err: LocalError) => err.code === "PATH_NOT_ALLOWED");
+});
+
+test("denylist de pastas ignora maiúsculas e cobre credenciais de nuvem", () => {
+	for (const dir of [".SSH", ".Aws", ".azure", ".gcloud", ".oci", ".config"]) {
+		assert.throws(() => ensureInsideRoot(`${dir}/x`), (err: LocalError) => err.code === "PATH_NOT_ALLOWED", dir);
+	}
+});
+
+test("ensureInsideRoot devolve o caminho resolvido, o mesmo que será aberto", () => {
+	mkdirSync(join(root, "sub"));
+	symlinkSync(join(root, "sub"), join(root, "link"));
+	assert.equal(ensureInsideRoot("link/a.txt"), join(realpathSync(root), "sub", "a.txt"));
+});
+
+test("symlink pendente para fora da raiz não deixa a gravação criar pasta fora", () => {
+	const outside = mkdtempSync(join(tmpdir(), "vertra-mcp-outside-"));
+	symlinkSync(join(outside, "missing"), join(root, "dangling"));
+	assert.throws(() => writeLocalFile(join(root, "dangling", "x.txt"), new Uint8Array([1])), LocalError);
+	assert.equal(existsSync(join(outside, "missing")), false);
 });

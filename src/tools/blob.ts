@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { assertNotSensitiveFile, readLocalFile } from "../local.js";
+import { readLocalFile } from "../local.js";
 import { respond } from "../result.js";
-import { D, R, W, WI, type ToolDefinition } from "./defs.js";
+import { D, R, WI, type ToolDefinition } from "./defs.js";
 import { enc, guardLocal, str } from "./util.js";
 
 // `route` uses the catalog's own format so the scope is derived from it; the request goes to the Blob host
@@ -61,7 +61,8 @@ export const blobTools: ToolDefinition[] = [
 		group: "blob",
 		route: ["POST", "/v1/blob/objects"],
 		local: true,
-		annotations: W,
+		// `overwrite: true` replaces an existing file, so the tool as a whole is destructive.
+		annotations: D,
 		inputSchema: {
 			file: z.string().describe("File on the computer"),
 			path: z.string().optional().describe("Path in Blob Storage (default: the file name)"),
@@ -71,7 +72,6 @@ export const blobTools: ToolDefinition[] = [
 		},
 		handler: (args, client) =>
 			guardLocal(async () => {
-				assertNotSensitiveFile(String(args.file));
 				const file = readLocalFile(String(args.file), MAX_SIMPLE_UPLOAD_BYTES);
 				const form = new FormData();
 				form.append("file", new Blob([new Uint8Array(file.bytes)]), file.name);
