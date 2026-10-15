@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/vertracloud/mcp/compare/v0.1.3...v0.2.0) (2026-10-15)
+
+
+### Features
+
+* add Blob Storage tools ([cde0037](https://github.com/vertracloud/mcp/commit/cde0037ccf76d48530a078f334f1ac76eae7ddf9))
+* describe Pix QR and invoice expiry in billing tools ([d0f4e77](https://github.com/vertracloud/mcp/commit/d0f4e7785d2c096c7484e14140070ff433234313))
+
+
+### Bug Fixes
+
+* resolve local paths before checking the root and the sensitive-file list ([aa58af5](https://github.com/vertracloud/mcp/commit/aa58af583128abbd4bb2bf8ce3d6a41200bd99c9))
+
 ## [0.1.3](https://github.com/vertracloud/mcp/compare/v0.1.2...v0.1.3) (2026-10-12)
 
 
