@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/vertracloud/mcp/compare/v0.2.0...v0.2.1) (2026-10-15)
+
+
+### Features
+
+* **blob:** add rename_on_conflict to upload_blob ([ae6f71b](https://github.com/vertracloud/mcp/commit/ae6f71bcbd603794738003728440df6951a9d78d))
+
 ## [0.2.0](https://github.com/vertracloud/mcp/compare/v0.1.3...v0.2.0) (2026-10-15)
 
 
