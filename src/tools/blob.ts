@@ -68,6 +68,7 @@ export const blobTools: ToolDefinition[] = [
 			path: z.string().optional().describe("Path in Blob Storage (default: the file name)"),
 			visibility: visibility.optional().describe("Default: private"),
 			overwrite: z.boolean().optional().describe("Replace an existing file at this path (default: false)"),
+			rename_on_conflict: z.boolean().optional().describe("If the path is taken, save as name-1.ext, name-2.ext, ... and return the final path (default: false; not with overwrite)"),
 			workspace_id,
 		},
 		handler: (args, client) =>
@@ -80,6 +81,7 @@ export const blobTools: ToolDefinition[] = [
 						path: str(args.path) ?? file.name,
 						visibility: str(args.visibility) ?? "private",
 						overwrite: Boolean(args.overwrite),
+						rename_on_conflict: args.rename_on_conflict === true ? true : undefined,
 						workspace_id: str(args.workspace_id),
 					}),
 				);

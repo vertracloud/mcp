@@ -109,6 +109,13 @@ test("upload_blob sends the disk file as multipart, private by default", async (
 	assert.equal(sent.size, 4);
 });
 
+test("upload_blob sends rename_on_conflict only when asked", async () => {
+	writeFileSync(join(root, "logo.png"), Buffer.from([0x89]));
+	const { fetch, calls } = stubFetch({ body: { response: { id: "1", path: "logo-1.png" } } });
+	await tool("upload_blob").handler({ file: "logo.png", rename_on_conflict: true }, new VertraClient("k", { fetch }));
+	assert.equal(calls[0]?.url, "https://blob.vertracloud.app/v1/objects?path=logo.png&visibility=private&overwrite=false&rename_on_conflict=true");
+});
+
 test("upload_blob refuses a sensitive file by name, without touching the network", async () => {
 	mkdirSync(join(root, ".git"));
 	mkdirSync(join(root, "app"));
