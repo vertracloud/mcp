@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/vertracloud/mcp/compare/v0.2.1...v0.2.2) (2026-10-18)
+
+
+### Bug Fixes
+
+* **apps:** handle asynchronous app creation with wait_for_app and build error guidance ([e97349d](https://github.com/vertracloud/mcp/commit/e97349d130037f2644cf727014036714475fb140))
+* **deps:** bump @vertracloud/api-types to 0.4.3 ([751ccbf](https://github.com/vertracloud/mcp/commit/751ccbf8961679a447b2240e8beb9b1222b4a927))
+
 ## [0.2.1](https://github.com/vertracloud/mcp/compare/v0.2.0...v0.2.1) (2026-10-15)
 
 
