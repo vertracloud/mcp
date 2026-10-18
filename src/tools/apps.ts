@@ -5,6 +5,9 @@ import { fail, ok, respond } from "../result.js";
 import { D, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, guardLocal, pick, str } from "./util.js";
 
+const POLL_MS = 2_000;
+const BUILD_ERROR_HINT =
+	"What to do by `last_build_error`: INSTALL_OUT_OF_MEMORY, raise the app memory; BUILD_FAILED or INSTALL_FAILED, read `get_logs` and fix the project; BUILD_TIMEOUT or INSTALL_TIMEOUT, make the build or install shorter; BUILD_INTERRUPTED, try again; INSTALL_SHIELD_BLOCKED, the network protection blocked traffic during the build.";
 const id = z.string().describe("Application ID");
 const workspace_id = z.string().optional().describe("ID of the workspace that owns the resource, if any");
 
@@ -20,7 +23,7 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_app",
-		description: "Details of an application: name, memory, runtime, main file, publication.",
+		description: `Details of an application: name, status (up, down or building), memory, runtime, main file, publication. When a build or install failed, \`last_build_error\` holds the code (null otherwise). ${BUILD_ERROR_HINT}`,
 		group: "apps",
 		route: ["GET", "/v1/apps/:id"],
 		annotations: R,
@@ -39,6 +42,27 @@ export const appsTools: ToolDefinition[] = [
 			const appId = str(args.id);
 			const path = appId ? `/v1/apps/${enc(appId)}/status` : "/v1/apps/status";
 			return client.get(path, { workspace_id: str(args.workspace_id) }).then((r) => respond(r));
+		},
+	},
+	{
+		name: "wait_for_app",
+		description:
+			`Waits up to \`timeout_seconds\` (max 25, default 20) for an application to leave the "building" status. Returns the app; \`status\` is "up" (ready), "down" (build failed; \`last_build_error\` says why) or still "building" (call again). ${BUILD_ERROR_HINT}`,
+		group: "apps",
+		route: ["GET", "/v1/apps/:id"],
+		annotations: R,
+		inputSchema: {
+			id,
+			timeout_seconds: z.number().int().min(1).max(25).optional().describe("Maximum wait in seconds (default 20, max 25)"),
+			workspace_id,
+		},
+		handler: async (args, client) => {
+			const deadline = Date.now() + Math.min(Number(args.timeout_seconds ?? 20), 25) * 1000;
+			for (;;) {
+				const res = await client.get<{ status?: string }>(`/v1/apps/${enc(args.id)}`, { workspace_id: str(args.workspace_id) });
+				if (!res.ok || (res.body as { status?: string })?.status !== "building" || Date.now() + POLL_MS > deadline) return respond(res);
+				await new Promise((r) => setTimeout(r, POLL_MS));
+			}
 		},
 	},
 	{
@@ -125,7 +149,7 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "create_app",
 		description:
-			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first.",
+			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first.",
 		group: "apps",
 		route: ["POST", "/v1/apps"],
 		local: true,
@@ -161,7 +185,7 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "deploy_app",
 		description:
-			"Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`.",
+			"Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`. Returns 409 APP_BUILDING if the application is still in its first build: wait with `wait_for_app` first.",
 		group: "apps",
 		route: ["POST", "/v1/apps/:id/files/upload"],
 		local: true,

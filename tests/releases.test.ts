@@ -137,3 +137,18 @@ test("nenhuma tool de release devolve valor de variável de ambiente", async () 
 	assert.ok(!Object.keys(tool("preview_rollback").inputSchema as object).includes("value"));
 	assert.ok((result.content[0]?.text ?? "").includes("TOKEN"));
 });
+
+test("wait_for_app repete até o app sair de building", async () => {
+	const { fetch, calls } = stubFetch([{ body: { response: { status: "building" } } }, { body: { response: { status: "up" } } }]);
+	const result = await tool("wait_for_app").handler({ id: "7" }, new VertraClient("k", { fetch }));
+	assert.equal(calls.length, 2);
+	assert.equal((parseResult(result) as { status: string }).status, "up");
+	assert.equal(toolScope(tool("wait_for_app")), "apps:read");
+}, 10_000);
+
+test("create_app, get_app e wait_for_app orientam sobre last_build_error", () => {
+	for (const name of ["create_app", "get_app", "wait_for_app"]) {
+		const d = tool(name).description;
+		assert.ok(d.includes("last_build_error") && d.includes("INSTALL_OUT_OF_MEMORY"), name);
+	}
+});
