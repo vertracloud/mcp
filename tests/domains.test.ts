@@ -103,3 +103,24 @@ test("schema de update_domain aceita null para limpar e só primary: true", () =
 	assert.ok(schema.safeParse({ ...base, primary: true }).success);
 	assert.ok(!schema.safeParse({ ...base, primary: false }).success);
 });
+
+test("unpublish_app avisa que remove os domínios próprios", () => {
+	assert.match(tool("unpublish_app").description, /custom domains/i);
+	assert.match(tool("unpublish_app").description, /DNS/);
+	assert.equal(tool("unpublish_app").annotations.destructiveHint, true);
+});
+
+test("anotações das tools de domínio: só leitura lê, o que muda o tráfego é destrutivo", () => {
+	for (const name of ["get_network", "list_domains", "get_domain_dns"]) {
+		assert.equal(tool(name).annotations.readOnlyHint, true, name);
+		assert.equal(tool(name).annotations.destructiveHint, false, name);
+	}
+	for (const name of ["update_domain", "remove_domain"]) {
+		assert.equal(tool(name).annotations.readOnlyHint, false, name);
+		assert.equal(tool(name).annotations.destructiveHint, true, name);
+	}
+	for (const name of ["add_domain", "get_domain_connect_url"]) {
+		assert.equal(tool(name).annotations.readOnlyHint, false, name);
+		assert.equal(tool(name).annotations.destructiveHint, false, name);
+	}
+});

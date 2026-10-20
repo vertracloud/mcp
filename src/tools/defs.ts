@@ -42,11 +42,12 @@ export interface ToolDefinition {
 	handler: (args: Record<string, unknown>, client: VertraClient) => Promise<ToolResult>;
 }
 
-/** Ready-made annotations: read, write and destructive. */
+/** Ready-made annotations: read, write, destructive, and destructive but repeatable (DI). */
 export const R: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true };
 export const W: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: false };
 export const WI: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true };
 export const D: ToolAnnotations = { readOnlyHint: false, destructiveHint: true, idempotentHint: false };
+export const DI: ToolAnnotations = { readOnlyHint: false, destructiveHint: true, idempotentHint: true };
 
 /** The scope required by a route, read from the public catalog (single source of truth). */
 export function scopeForRoute(method: HttpMethod, path: string): APIApiKeyScope | null {

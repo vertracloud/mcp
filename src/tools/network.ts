@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { fail, ok, respond } from "../result.js";
-import { D, R, W, WI, type ToolDefinition } from "./defs.js";
+import { D, DI, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick, str } from "./util.js";
 
 const id = z.string().min(1).describe("Application ID");
@@ -55,7 +55,7 @@ export const networkTools: ToolDefinition[] = [
 	},
 	{
 		name: "unpublish_app",
-		description: "Takes the application off the web; the public address stops responding.",
+		description: "Takes the application off the web; the public address stops responding. Also permanently removes all of the application's custom domains: publishing again brings back only the subdomain, and adding a domain again requires new DNS validation.",
 		group: "network",
 		route: ["DELETE", "/v1/apps/:id/network/publish"],
 		annotations: D,
@@ -101,10 +101,10 @@ export const networkTools: ToolDefinition[] = [
 	{
 		name: "update_domain",
 		description:
-			"Changes a custom domain without redeploying. Send only what changes; `null` clears `path_prefix` or `redirect_to`. `primary: true` swaps the domain with its automatic companion as the main one. Returns the changed domains.",
+			"Changes a custom domain without redeploying. Send only what changes; `null` clears `path_prefix` or `redirect_to`. `primary: true` swaps the domain with its automatic companion as the main one. Returns the changed domains. Changes where real traffic goes (port, path prefix, redirect), so it takes effect immediately.",
 		group: "network",
 		route: ["PATCH", "/v1/apps/:id/domains/:domain_id"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: {
 			id,
 			domain_id,
