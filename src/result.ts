@@ -19,6 +19,11 @@ export function fail(envelope: unknown): ToolResult {
 	return { isError: true, content: text(envelope) };
 }
 
+/** Wraps content that third parties control (logs, files) so the model reads it as data, never as instructions. */
+export function untrusted(content: unknown): { untrusted_content: unknown } {
+	return { untrusted_content: content };
+}
+
 /** Passes the client's result through, optionally mapping the success body. */
 export function respond<T>(res: ApiResult<T>, map?: (body: T) => unknown): ToolResult {
 	if (!res.ok) return fail(res.body);

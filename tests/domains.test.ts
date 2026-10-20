@@ -115,6 +115,12 @@ test("unpublish_app avisa que remove os domínios próprios", () => {
 	assert.equal(tool("unpublish_app").annotations.destructiveHint, true);
 });
 
+test("remove_domain só diz que o companheiro sai junto quando o alvo não é o companheiro", () => {
+	const description = tool("remove_domain").description;
+	assert.match(description, /unless the target is itself an automatic companion/i);
+	assert.match(description, /only that domain/i);
+});
+
 test("anotações das tools de domínio: só leitura lê, o que muda o tráfego é destrutivo", () => {
 	for (const name of ["get_network", "list_domains", "get_domain_dns"]) {
 		assert.equal(tool(name).annotations.readOnlyHint, true, name);

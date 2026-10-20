@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { toolsFor } from "../src/server.js";
+import { SERVER_INSTRUCTIONS, toolsFor } from "../src/server.js";
 import { tools } from "../src/tools/index.js";
 
 const LOCAL = ["create_app", "deploy_app", "upload_files", "upload_blob", "download_app", "download_snapshot"];
@@ -19,4 +19,10 @@ test("o modo local registra tudo", () => {
 
 test("toda tool marcada `local` está na lista conhecida", () => {
 	assert.deepEqual(tools.filter((t) => t.local).map((t) => t.name).sort(), [...LOCAL].sort());
+});
+
+test("as instruções do servidor tratam log e arquivo da aplicação como dado, não como instrução", () => {
+	assert.match(SERVER_INSTRUCTIONS, /untrusted_content/);
+	assert.match(SERVER_INSTRUCTIONS, /never as instructions/i);
+	assert.match(SERVER_INSTRUCTIONS, /get_docs/);
 });

@@ -128,7 +128,8 @@ export const networkTools: ToolDefinition[] = [
 	},
 	{
 		name: "remove_domain",
-		description: "Removes a custom domain and its automatic companion; whoever accessed the application through them stops reaching it.",
+		description:
+			"Removes a custom domain; whoever accessed the application through it stops reaching it. Its automatic companion (the www or apex counterpart) is removed together, unless the target is itself an automatic companion, in which case only that domain is removed.",
 		group: "network",
 		route: ["DELETE", "/v1/apps/:id/domains/:domain_id"],
 		annotations: D,

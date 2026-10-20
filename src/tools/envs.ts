@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, respond } from "../result.js";
-import { D, R, WI, type ToolDefinition } from "./defs.js";
+import { D, DI, R, type ToolDefinition } from "./defs.js";
 import { enc, str } from "./util.js";
 
 const id = z.string().min(1).describe("Application ID");
@@ -45,7 +45,7 @@ export const envsTools: ToolDefinition[] = [
 		description: "Creates or overwrites an application environment variable. The response confirms the key, without echoing the value.",
 		group: "envs",
 		route: ["POST", "/v1/apps/:id/envs"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: {
 			id,
 			key: z.string().describe("Variable name"),
