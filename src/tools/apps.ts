@@ -8,7 +8,7 @@ import { enc, guardLocal, pick, str } from "./util.js";
 const POLL_MS = 2_000;
 const BUILD_ERROR_HINT =
 	"What to do by `last_build_error`: INSTALL_OUT_OF_MEMORY, raise the app memory; BUILD_FAILED or INSTALL_FAILED, read `get_logs` and fix the project; BUILD_TIMEOUT or INSTALL_TIMEOUT, make the build or install shorter; BUILD_INTERRUPTED, try again; INSTALL_SHIELD_BLOCKED, the network protection blocked traffic during the build.";
-const id = z.string().describe("Application ID");
+const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional().describe("ID of the workspace that owns the resource, if any");
 
 export const appsTools: ToolDefinition[] = [

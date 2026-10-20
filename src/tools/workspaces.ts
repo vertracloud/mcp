@@ -3,8 +3,8 @@ import { respond } from "../result.js";
 import { D, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick } from "./util.js";
 
-const id = z.string().describe("Workspace ID");
-const token = z.string().describe("Invite token (the final part of the link)");
+const id = z.string().min(1).describe("Workspace ID");
+const token = z.string().min(1).describe("Invite token (the final part of the link)");
 
 export const workspacesTools: ToolDefinition[] = [
 	{
@@ -50,7 +50,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["POST", "/v1/workspaces/:id/apps/:app_id"],
 		annotations: WI,
-		inputSchema: { id, app_id: z.string() },
+		inputSchema: { id, app_id: z.string().min(1) },
 		handler: (args, client) => client.post(`/v1/workspaces/${enc(args.id)}/apps/${enc(args.app_id)}`).then((r) => respond(r)),
 	},
 	{
@@ -59,7 +59,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/apps/:app_id"],
 		annotations: WI,
-		inputSchema: { id, app_id: z.string() },
+		inputSchema: { id, app_id: z.string().min(1) },
 		handler: (args, client) => client.delete(`/v1/workspaces/${enc(args.id)}/apps/${enc(args.app_id)}`).then((r) => respond(r)),
 	},
 	{
@@ -68,7 +68,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["POST", "/v1/workspaces/:id/databases/:db_id"],
 		annotations: WI,
-		inputSchema: { id, database_id: z.string() },
+		inputSchema: { id, database_id: z.string().min(1) },
 		handler: (args, client) =>
 			client.post(`/v1/workspaces/${enc(args.id)}/databases/${enc(args.database_id)}`).then((r) => respond(r)),
 	},
@@ -78,7 +78,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/databases/:db_id"],
 		annotations: WI,
-		inputSchema: { id, database_id: z.string() },
+		inputSchema: { id, database_id: z.string().min(1) },
 		handler: (args, client) =>
 			client.delete(`/v1/workspaces/${enc(args.id)}/databases/${enc(args.database_id)}`).then((r) => respond(r)),
 	},
@@ -97,7 +97,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["PUT", "/v1/workspaces/:id/members/:user_id"],
 		annotations: WI,
-		inputSchema: { id, user_id: z.string(), role_id: z.string() },
+		inputSchema: { id, user_id: z.string().min(1), role_id: z.string().min(1) },
 		handler: (args, client) =>
 			client.put(`/v1/workspaces/${enc(args.id)}/members/${enc(args.user_id)}`, { role_id: String(args.role_id) }).then((r) => respond(r)),
 	},
@@ -107,7 +107,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/members/:user_id"],
 		annotations: D,
-		inputSchema: { id, user_id: z.string() },
+		inputSchema: { id, user_id: z.string().min(1) },
 		handler: (args, client) => client.delete(`/v1/workspaces/${enc(args.id)}/members/${enc(args.user_id)}`).then((r) => respond(r)),
 	},
 	{
@@ -144,7 +144,7 @@ export const workspacesTools: ToolDefinition[] = [
 		annotations: WI,
 		inputSchema: {
 			id,
-			role_id: z.string(),
+			role_id: z.string().min(1),
 			name: z.string(),
 			permissions: z.array(z.string()),
 			position: z.number().int().optional(),
@@ -160,7 +160,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/roles/:role_id"],
 		annotations: D,
-		inputSchema: { id, role_id: z.string() },
+		inputSchema: { id, role_id: z.string().min(1) },
 		handler: (args, client) => client.delete(`/v1/workspaces/${enc(args.id)}/roles/${enc(args.role_id)}`).then((r) => respond(r)),
 	},
 	{
@@ -188,7 +188,7 @@ export const workspacesTools: ToolDefinition[] = [
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/invites/:invite_id"],
 		annotations: D,
-		inputSchema: { id, invite_id: z.string() },
+		inputSchema: { id, invite_id: z.string().min(1) },
 		handler: (args, client) =>
 			client.delete(`/v1/workspaces/${enc(args.id)}/invites/${enc(args.invite_id)}`).then((r) => respond(r)),
 	},
@@ -243,8 +243,8 @@ export const workspacesTools: ToolDefinition[] = [
 		inputSchema: {
 			id,
 			action: z.enum(["app_delete", "database_delete", "snapshot_create", "snapshot_restore"]),
-			resource_id: z.string().describe("Application or database ID"),
-			snapshot_id: z.string().optional().describe("Required for snapshot_restore"),
+			resource_id: z.string().min(1).describe("Application or database ID"),
+			snapshot_id: z.string().min(1).optional().describe("Required for snapshot_restore"),
 		},
 		handler: (args, client) =>
 			client

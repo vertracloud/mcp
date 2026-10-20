@@ -3,9 +3,9 @@ import { fail, ok, respond } from "../result.js";
 import { D, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick, str } from "./util.js";
 
-const id = z.string().describe("Application ID");
+const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional();
-const domain_id = z.string().describe("Domain ID (from `list_domains`)");
+const domain_id = z.string().min(1).describe("Domain ID (from `list_domains`)");
 const port = z.number().int().min(1).max(65535).describe("Application port that serves the domain, 1-65535 (default 80)");
 const pathPrefix = z
 	.string()

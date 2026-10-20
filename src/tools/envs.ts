@@ -3,7 +3,7 @@ import { ok, respond } from "../result.js";
 import { D, R, WI, type ToolDefinition } from "./defs.js";
 import { enc, str } from "./util.js";
 
-const id = z.string().describe("Application ID");
+const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional();
 
 /**
@@ -65,7 +65,7 @@ export const envsTools: ToolDefinition[] = [
 		group: "envs",
 		route: ["DELETE", "/v1/apps/:id/envs/:envId"],
 		annotations: D,
-		inputSchema: { id, env_id: z.string().describe("Variable ID"), workspace_id },
+		inputSchema: { id, env_id: z.string().min(1).describe("Variable ID"), workspace_id },
 		handler: (args, client) =>
 			client
 				.delete(`/v1/apps/${enc(args.id)}/envs/${enc(args.env_id)}`, { workspace_id: str(args.workspace_id) })

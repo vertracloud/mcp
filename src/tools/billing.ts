@@ -89,7 +89,7 @@ export const billingTools: ToolDefinition[] = [
 		group: "billing",
 		route: ["POST", "/v1/orders/:orderId/initiate/pix"],
 		annotations: W,
-		inputSchema: { order_id: z.string() },
+		inputSchema: { order_id: z.string().min(1) },
 		handler: (args, client) => client.post(`/v1/orders/${enc(args.order_id)}/initiate/pix`).then((r) => respond(r)),
 	},
 	{
@@ -98,7 +98,7 @@ export const billingTools: ToolDefinition[] = [
 		group: "billing",
 		route: ["GET", "/v1/orders/:orderId/status"],
 		annotations: R,
-		inputSchema: { order_id: z.string() },
+		inputSchema: { order_id: z.string().min(1) },
 		handler: (args, client) => client.get(`/v1/orders/${enc(args.order_id)}/status`).then((r) => respond(r)),
 	},
 	{
@@ -116,7 +116,7 @@ export const billingTools: ToolDefinition[] = [
 		group: "billing",
 		route: ["POST", "/v1/redeem/:code"],
 		annotations: W,
-		inputSchema: { code: z.string() },
+		inputSchema: { code: z.string().min(1) },
 		handler: (args, client) => client.post(`/v1/redeem/${enc(args.code)}`).then((r) => respond(r)),
 	},
 ];

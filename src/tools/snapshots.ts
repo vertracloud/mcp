@@ -5,7 +5,7 @@ import { D, R, W, type ToolDefinition } from "./defs.js";
 import { enc, guardLocal, str } from "./util.js";
 
 const scope = z.enum(["applications", "databases"]).describe("Resource type");
-const resource_id = z.string().describe("Application or database ID");
+const resource_id = z.string().min(1).describe("Application or database ID");
 
 export const snapshotsTools: ToolDefinition[] = [
 	{
@@ -39,7 +39,7 @@ export const snapshotsTools: ToolDefinition[] = [
 		group: "snapshots",
 		route: ["POST", "/v1/users/:id/snapshots/:snapshot_id/restore"],
 		annotations: D,
-		inputSchema: { scope, resource_id, snapshot_id: z.string(), target_id: z.string().optional().describe("Restore into a different resource") },
+		inputSchema: { scope, resource_id, snapshot_id: z.string().min(1), target_id: z.string().optional().describe("Restore into a different resource") },
 		handler: (args, client) =>
 			client
 				.post(
@@ -56,7 +56,7 @@ export const snapshotsTools: ToolDefinition[] = [
 		route: ["GET", "/v1/users/:id/snapshots/:snapshot_id/download"],
 		local: true,
 		annotations: R,
-		inputSchema: { scope, resource_id, snapshot_id: z.string(), dest: z.string().describe("Path of the file to write") },
+		inputSchema: { scope, resource_id, snapshot_id: z.string().min(1), dest: z.string().describe("Path of the file to write") },
 		handler: (args, client) =>
 			guardLocal(async () => {
 				const res = await client.download(`/v1/users/${enc(args.resource_id)}/snapshots/${enc(args.snapshot_id)}/download`, {

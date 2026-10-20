@@ -4,7 +4,7 @@ import { respond } from "../result.js";
 import { D, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, guardLocal, str } from "./util.js";
 
-const id = z.string().describe("Application ID");
+const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional();
 
 /** Decodes to text when the content is UTF-8 with no null byte; otherwise returns base64. */

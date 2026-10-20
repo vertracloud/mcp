@@ -4,8 +4,8 @@ import { respond } from "../result.js";
 import { D, R, type ToolDefinition } from "./defs.js";
 import { enc, str } from "./util.js";
 
-const id = z.string().describe("Application ID");
-const release_id = z.string().describe("Release ID (from `list_releases`)");
+const id = z.string().min(1).describe("Application ID");
+const release_id = z.string().min(1).describe("Release ID (from `list_releases`)");
 const workspace_id = z.string().optional().describe("ID of the workspace that owns the resource, if any");
 
 export const releasesTools: ToolDefinition[] = [

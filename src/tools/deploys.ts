@@ -4,7 +4,7 @@ import { respond } from "../result.js";
 import { D, R, W, type ToolDefinition } from "./defs.js";
 import { enc, str } from "./util.js";
 
-const id = z.string().describe("Application ID");
+const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional();
 
 export const deploysTools: ToolDefinition[] = [

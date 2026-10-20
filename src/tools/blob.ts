@@ -10,7 +10,7 @@ import { enc, guardLocal, str } from "./util.js";
 /** Largest file the single-request upload accepts (`POST /v1/objects`). */
 export const MAX_SIMPLE_UPLOAD_BYTES = 100 * 1024 * 1024;
 
-const id = z.string().describe("Blob object ID");
+const id = z.string().min(1).describe("Blob object ID");
 const workspace_id = z.string().optional();
 const visibility = z.enum(["public", "private"]);
 

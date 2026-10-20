@@ -4,7 +4,7 @@ import { fail, ok, respond } from "../result.js";
 import { D, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick, str } from "./util.js";
 
-const id = z.string().describe("Database ID");
+const id = z.string().min(1).describe("Database ID");
 const workspace_id = z.string().optional();
 
 const ENGINES = { postgresql: DatabaseType.POSTGRESQL, mongodb: DatabaseType.MONGODB, redis: DatabaseType.REDIS, mysql: DatabaseType.MYSQL } as const;

@@ -1,14 +1,30 @@
 import { LocalError } from "../local.js";
 import { type ToolResult, fail } from "../result.js";
 
+function isDotSegment(segment: string): boolean {
+	let current = segment;
+	for (let i = 0; i < 4; i++) {
+		if (current === "" || current === "." || current === "..") return true;
+		let decoded: string;
+		try {
+			decoded = decodeURIComponent(current);
+		} catch {
+			return false;
+		}
+		if (decoded === current) return false;
+		current = decoded;
+	}
+	return false;
+}
+
 /**
- * URL segment coming from the agent: escaped, and `.`/`..`/empty rejected — Node's `URL`
- * normalizes `..` and the tool would end up hitting a different route than the one it
- * advertised to the MCP client.
+ * URL segment coming from the agent: escaped, and empty/`.`/`..` rejected — also when
+ * percent-encoded. Node's `URL` normalizes `..` and the tool would end up hitting a different
+ * route than the one it advertised to the MCP client.
  */
 export function enc(value: unknown): string {
 	const segment = String(value);
-	if (segment === "" || segment === "." || segment === "..") {
+	if (isDotSegment(segment)) {
 		throw new LocalError("INVALID_ID", `Invalid identifier: "${segment}".`);
 	}
 	return encodeURIComponent(segment);
