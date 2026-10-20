@@ -24,7 +24,7 @@ export const billingTools: ToolDefinition[] = [
 	},
 	{
 		name: "create_order",
-		description: "Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. Requires complete billing details (name, address and, in Brazil, CPF/CNPJ); without them it fails with BILLING_DETAILS_INCOMPLETE — use `set_billing_details` after the user gives the data. Accounts on the suspended Free plan cannot create apps or databases until an order is paid.",
+		description: "Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. Requires complete billing details (name, address and, in Brazil, CPF/CNPJ); without them it fails with BILLING_DETAILS_INCOMPLETE — use `set_billing_details` after the user gives the data. Accounts without a plan cannot create apps or databases until an order is paid.",
 		group: "billing",
 		route: ["POST", "/v1/orders"],
 		annotations: W,

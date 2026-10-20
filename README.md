@@ -100,7 +100,7 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `start_app` | Turns the application on. | `apps:write` |  |
 | `restart_app` | Restarts the application. `reinstall_dependencies` reinstalls dependencies from scratch (ignoring the install cache); `force_build` runs the build command again even without a code change. Both count as a deploy against the plan's hourly limit. | `apps:write` |  |
 | `stop_app` | Turns the application off. | `apps:write` |  |
-| `create_app` | Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status "building"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is "up" or "down"; if "down", `last_build_error` has the code and `get_logs` the detail. What to do by `last_build_error`: INSTALL_OUT_OF_MEMORY, raise the app memory; BUILD_FAILED or INSTALL_FAILED, read `get_logs` and fix the project; BUILD_TIMEOUT or INSTALL_TIMEOUT, make the build or install shorter; BUILD_INTERRUPTED, try again; INSTALL_SHIELD_BLOCKED, the network protection blocked traffic during the build. While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first. | `apps:write` | yes |
+| `create_app` | Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status "building"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is "up" or "down"; if "down", `last_build_error` has the code and `get_logs` the detail. What to do by `last_build_error`: INSTALL_OUT_OF_MEMORY, raise the app memory; BUILD_FAILED or INSTALL_FAILED, read `get_logs` and fix the project; BUILD_TIMEOUT or INSTALL_TIMEOUT, make the build or install shorter; BUILD_INTERRUPTED, try again; INSTALL_SHIELD_BLOCKED, the network protection blocked traffic during the build. While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. | `apps:write` | yes |
 | `deploy_app` | Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`. Returns 409 APP_BUILDING if the application is still in its first build: wait with `wait_for_app` first. | `apps:files` | yes |
 | `update_app_config` | Changes the application's configuration: name, memory, main file, runtime version, start command, build command and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime "on" and auto rollback depend on the plan (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK). | `apps:write` |  |
 | `download_app` | Downloads the application's files as a zip and writes it to the given path. | `apps:read` | yes |
@@ -143,12 +143,16 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 
 | tool | what it does | scope | local only |
 |---|---|---|---|
-| `get_network` | The application's custom domain and DNS records, in a single response. | `apps:read` |  |
+| `get_network` | The application's custom domains: hostname, status, SSL status, port, path prefix and redirect. For the DNS records of one domain, use `get_domain_dns`. | `apps:read` |  |
 | `set_subdomain` | Changes the application's public subdomain. Who is allowed to pick the name is determined by the plan. | `apps:write` |  |
 | `publish_app` | Publishes the application on the web (public subdomain). | `apps:write` |  |
 | `unpublish_app` | Takes the application off the web; the public address stops responding. | `apps:write` |  |
-| `set_custom_domain` | Points a custom domain to the application. | `apps:write` |  |
-| `remove_custom_domain` | Removes the application's custom domain; whoever accessed it through that domain stops reaching it. | `apps:write` |  |
+| `list_domains` | Lists the application's custom domains: hostname, status, SSL status, port, path prefix and redirect. | `apps:read` |  |
+| `add_domain` | Adds a custom domain to the application, with no redeploy. By default it also creates the automatic `www` (or root) companion, which does not count toward the plan's domain limit. Then call `get_domain_dns` for the records to create at the DNS provider. `port` (1-65535, default 80) is the application port that serves the domain; `path_prefix` is a literal path added in front of every request; `redirect_to` is the id of another domain of the same application, and then the domain redirects there with `redirect_status`. Possible errors: PLAN_DOES_NOT_SUPPORT_CUSTOM_DOMAIN, DOMAIN_LIMIT_REACHED, DOMAIN_PORT_LIMIT_REACHED, DOMAIN_ALREADY_IN_USE, INVALID_CUSTOM_DOMAIN_FORMAT, INVALID_DOMAIN_PORT, INVALID_PATH_PREFIX, INVALID_REDIRECT_TARGET. | `apps:write` |  |
+| `update_domain` | Changes a custom domain without redeploying. Send only what changes; `null` clears `path_prefix` or `redirect_to`. `primary: true` swaps the domain with its automatic companion as the main one. Returns the changed domains. | `apps:write` |  |
+| `remove_domain` | Removes a custom domain and its automatic companion; whoever accessed the application through them stops reaching it. | `apps:write` |  |
+| `get_domain_dns` | DNS records the user must create at the DNS provider for a custom domain, with the status of each (pending or active). | `apps:read` |  |
+| `get_domain_connect_url` | Returns a link that configures the domain's DNS automatically at a supported DNS provider, for the user to open. Fails with DOMAIN_CONNECT_UNAVAILABLE (404) when automatic setup is not available; then use `get_domain_dns`. | `apps:write` |  |
 | `purge_cache` | Clears the application's edge cache. | `apps:write` |  |
 
 #### Databases
@@ -159,7 +163,7 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | `get_database` | Details of a database: engine, name, memory, address and port. | `databases:read` |  |
 | `get_database_status` | Live status (CPU, RAM, disk, uptime) of a database; without `id`, of all of them. | `databases:read` |  |
 | `get_database_metrics` | History of CPU, RAM, storage and network usage of the database. | `databases:read` |  |
-| `create_database` | Creates a managed database. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first. | `databases:write` |  |
+| `create_database` | Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. | `databases:write` |  |
 | `update_database` | Changes the database's name, description or memory. | `databases:write` |  |
 | `start_database` | Turns the database on. | `databases:write` |  |
 | `stop_database` | Turns the database off. | `databases:write` |  |
@@ -233,7 +237,7 @@ Folders and favorites are preferences persisted on the server: tools with `perso
 | tool | what it does | scope | local only |
 |---|---|---|---|
 | `list_plans` | Plans and prices, straight from the public knowledge base (not from a route). | — |  |
-| `create_order` | Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. Requires complete billing details (name, address and, in Brazil, CPF/CNPJ); without them it fails with BILLING_DETAILS_INCOMPLETE — use `set_billing_details` after the user gives the data. Accounts on the suspended Free plan cannot create apps or databases until an order is paid. | `billing:write` |  |
+| `create_order` | Creates a plan subscription order and returns the final price (with coupon discount, if any) and the `order_id`. Requires complete billing details (name, address and, in Brazil, CPF/CNPJ); without them it fails with BILLING_DETAILS_INCOMPLETE — use `set_billing_details` after the user gives the data. Accounts without a plan cannot create apps or databases until an order is paid. | `billing:write` |  |
 | `get_billing_details` | The account's billing details (name, address, phone, masked CPF/CNPJ) and `complete`, which says whether they are enough to create an order. `null` until saved. | `billing:read` |  |
 | `set_billing_details` | Replaces the account's billing details. SENDS THE USER'S PERSONAL DATA (name, address and CPF/CNPJ): use it only when the user provided these values in this conversation, never guess or invent them. In Brazil, `number`, `district`, `city_code` (7-digit IBGE), `state` and an 8-digit `postal_code` are required, plus `tax_id`; outside Brazil, `line1`, `city` and `postal_code`. Omitting `tax_id` keeps the saved one. | `billing:write` |  |
 | `get_pix` | Generates the order's PIX payment and returns the copy-and-paste code and the QR Code. THE PERSON PAYS, in their banking app — the agent never pays anything. The QR expires at `expires_at` (up to 30 min); calling get_pix again for the same open order returns a fresh QR. | `billing:write` |  |

@@ -149,7 +149,7 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "create_app",
 		description:
-			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts on the suspended Free plan get FREE_PLAN_SUSPENDED: a paid plan is needed first.",
+			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first.",
 		group: "apps",
 		route: ["POST", "/v1/apps"],
 		local: true,
