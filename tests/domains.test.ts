@@ -91,6 +91,11 @@ test("schema de add_domain aplica os limites do contrato", () => {
 	assert.ok(schema.safeParse({ ...base, path_prefix: "/api" }).success);
 	assert.ok(!schema.safeParse({ ...base, path_prefix: "api" }).success);
 	assert.ok(!schema.safeParse({ ...base, path_prefix: "/api/" }).success);
+	assert.ok(schema.safeParse({ ...base, path_prefix: "/api/v1" }).success);
+	for (const bad of ["/", "/a b", "/a//b", "/a/./b", "/a/../b", "/..", "/.", "/a?x", `/${"a".repeat(128)}`]) {
+		assert.ok(!schema.safeParse({ ...base, path_prefix: bad }).success, bad);
+	}
+	assert.ok(schema.safeParse({ ...base, path_prefix: `/${"a".repeat(127)}` }).success);
 });
 
 test("schema de update_domain aceita null para limpar e só primary: true", () => {

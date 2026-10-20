@@ -9,7 +9,9 @@ const domain_id = z.string().min(1).describe("Domain ID (from `list_domains`)");
 const port = z.number().int().min(1).max(65535).describe("Application port that serves the domain, 1-65535 (default 80)");
 const pathPrefix = z
 	.string()
-	.regex(/^\/.*[^/]$/, "must start with \"/\" and have no trailing \"/\"")
+	.max(128)
+	.regex(/^(\/[A-Za-z0-9._~-]+)+$/, "must be segments of letters, numbers, \".\", \"_\", \"~\" and \"-\", each starting with \"/\", no trailing \"/\"")
+	.refine((value) => !value.split("/").some((segment) => segment === "." || segment === ".."), "must not contain \".\" or \"..\" segments")
 	.describe("Literal path added in front of every request, e.g. `/api`");
 const redirectStatus = z
 	.union([z.literal(301), z.literal(302), z.literal(307), z.literal(308)])
