@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0](https://github.com/vertracloud/mcp/compare/v0.2.2...v0.3.0) (2026-10-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* domain tools for multiple custom domains and plan names
+
+### Features
+
+* domain tools for multiple custom domains and plan names ([654947b](https://github.com/vertracloud/mcp/commit/654947bf9268eab42e19955ca19b39f4bc7c46c3))
+
+
+### Bug Fixes
+
+* **deps:** lock @vertracloud/api-types 0.5.0 ([791b02d](https://github.com/vertracloud/mcp/commit/791b02da64a5a50ee3418849a14676b5d74f4b94))
+* flag stop, restart, visibility, overwrite and access-changing tools as destructive ([2a9d5d8](https://github.com/vertracloud/mcp/commit/2a9d5d8906fbc92e65cb49f4ef31ca8c5d864848))
+* mark app logs and files as untrusted content and flag write tools as destructive ([10bbb9e](https://github.com/vertracloud/mcp/commit/10bbb9ed2f762462dfb29cf86318608242103bd8))
+* refuse HTTP redirects so the API key is never forwarded to another host ([92863ad](https://github.com/vertracloud/mcp/commit/92863ad22cead3763489d5176e405f1f42f971a7))
+* reject empty and dot path segments before sending a request ([a109d81](https://github.com/vertracloud/mcp/commit/a109d8104e9c69c8c51670e4234e7f5a4dfcfc05))
+* validate path_prefix with the same rule as the API ([4b2e546](https://github.com/vertracloud/mcp/commit/4b2e546c1b8429cca6cd1d73a51b2ccc7cb29089))
+* warn that unpublishing removes custom domains and mark update_domain destructive ([bd055cd](https://github.com/vertracloud/mcp/commit/bd055cd53524823fc5acca92fa07c079b2e45fe2))
+* wrap release logs, release/deploy messages and blob paths in untrusted_content ([8513c6d](https://github.com/vertracloud/mcp/commit/8513c6d46d6463302110a5dd1114896728ed8795))
+
 ## [0.2.2](https://github.com/vertracloud/mcp/compare/v0.2.1...v0.2.2) (2026-10-18)
 
 
