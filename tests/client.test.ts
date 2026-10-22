@@ -49,3 +49,31 @@ test("baseUrl alternativo é respeitado e a query é montada", async () => {
 
 	assert.equal(calls[0]?.url, "http://localhost:3000/v1/apps/1/metrics?range=24h");
 });
+
+test("não segue redirect: 302 falha com mensagem clara e o destino nunca recebe a requisição", async () => {
+	const { createServer } = await import("node:http");
+	let targetHits = 0;
+	const target = createServer((_req, res) => {
+		targetHits++;
+		res.end("{}");
+	});
+	await new Promise<void>((r) => target.listen(0, "127.0.0.1", r));
+	const targetPort = (target.address() as { port: number }).port;
+	const origin = createServer((_req, res) => {
+		res.writeHead(302, { Location: `http://127.0.0.1:${targetPort}/steal` });
+		res.end();
+	});
+	await new Promise<void>((r) => origin.listen(0, "127.0.0.1", r));
+	const originPort = (origin.address() as { port: number }).port;
+	try {
+		const res = await new VertraClient("k", { baseUrl: `http://127.0.0.1:${originPort}` }).get("/v1/apps");
+		assert.equal(res.ok, false);
+		const body = res.body as { code: string; message: string };
+		assert.equal(body.code, "UNEXPECTED_REDIRECT");
+		assert.match(body.message, /redirect/i);
+		assert.equal(targetHits, 0);
+	} finally {
+		origin.close();
+		target.close();
+	}
+});

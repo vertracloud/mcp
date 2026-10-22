@@ -90,10 +90,20 @@ export class VertraClient {
 				method: input.method,
 				headers,
 				body: payload,
+				// The API never redirects; following one would send the Bearer key to another host.
+				redirect: "error",
 				signal: AbortSignal.timeout(input.binary ? BINARY_TIMEOUT_MS : TIMEOUT_MS),
 			});
 		} catch (err) {
 			const name = err instanceof Error ? err.name : undefined;
+			const cause = err instanceof Error ? err.cause : undefined;
+			if (/redirect/i.test(`${err instanceof Error ? err.message : ""} ${cause instanceof Error ? cause.message : String(cause ?? "")}`)) {
+				return {
+					ok: false,
+					status: 0,
+					body: { code: "UNEXPECTED_REDIRECT", message: "The API answered with a redirect, which is refused so the API key is never sent to another address. Check the configured base URL." },
+				};
+			}
 			const code = name === "TimeoutError" || name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR";
 			return { ok: false, status: 0, body: { code, message: err instanceof Error ? err.message : String(err) } };
 		}
