@@ -1,7 +1,7 @@
 import { DatabaseType } from "@vertracloud/api-types/payloads/v1";
 import { z } from "zod";
 import { fail, ok, respond } from "../result.js";
-import { D, R, W, WI, type ToolDefinition } from "./defs.js";
+import { D, DI, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick, str } from "./util.js";
 
 const id = z.string().min(1).describe("Database ID");
@@ -130,7 +130,7 @@ export const databasesTools: ToolDefinition[] = [
 		description: "Turns the database off.",
 		group: "databases",
 		route: ["POST", "/v1/databases/:id/stop"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, workspace_id },
 		handler: (args, client) =>
 			client.post(`/v1/databases/${enc(args.id)}/stop`, undefined, { workspace_id: str(args.workspace_id) }).then((r) => respond(r)),

@@ -196,3 +196,24 @@ test("erro da API em get_release_log não é embrulhado", async () => {
 	assert.equal(result.isError, true);
 	assert.deepEqual(parseResult(result), { code: "RELEASE_NOT_FOUND" });
 });
+
+test("o que para, reinicia, despublica, troca visibilidade/acesso ou sobrescreve é anotado como destrutivo", () => {
+	const destructive = [
+		"set_blob_visibility",
+		"stop_app",
+		"set_subdomain",
+		"restart_app",
+		"stop_database",
+		"move_file",
+		"upload_files",
+		"update_member",
+		"update_role",
+		"remove_app_from_workspace",
+		"remove_database_from_workspace",
+		"create_deploy_webhook",
+	];
+	for (const name of destructive) {
+		assert.equal(tool(name).annotations.destructiveHint, true, name);
+		assert.equal(tool(name).annotations.readOnlyHint, false, name);
+	}
+});

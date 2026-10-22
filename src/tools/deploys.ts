@@ -34,7 +34,7 @@ export const deploysTools: ToolDefinition[] = [
 		description: "Creates (or renews) the application's automatic-deploy webhook, from an already connected GitHub repository.",
 		group: "deploys",
 		route: ["POST", "/v1/apps/:id/deploys/webhook"],
-		annotations: W,
+		annotations: D,
 		inputSchema: {
 			id,
 			owner: z.string().describe("Login of the repository owner on GitHub"),

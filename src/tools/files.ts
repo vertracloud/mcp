@@ -79,7 +79,7 @@ export const filesTools: ToolDefinition[] = [
 		description: "Moves or renames a file inside the application.",
 		group: "files",
 		route: ["PATCH", "/v1/apps/:id/files"],
-		annotations: W,
+		annotations: D,
 		inputSchema: { id, from: z.string().describe("Current path"), to: z.string().describe("New path"), workspace_id },
 		handler: (args, client) =>
 			client
@@ -92,7 +92,7 @@ export const filesTools: ToolDefinition[] = [
 		group: "files",
 		route: ["POST", "/v1/apps/:id/files/upload"],
 		local: true,
-		annotations: W,
+		annotations: D,
 		inputSchema: {
 			id,
 			paths: z.array(z.string()).min(1).describe("Files on the computer"),

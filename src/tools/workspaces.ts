@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { respond } from "../result.js";
-import { D, R, W, WI, type ToolDefinition } from "./defs.js";
+import { D, DI, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick } from "./util.js";
 
 const id = z.string().min(1).describe("Workspace ID");
@@ -58,7 +58,7 @@ export const workspacesTools: ToolDefinition[] = [
 		description: "Takes an application out of the workspace and returns it to the owning account.",
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/apps/:app_id"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, app_id: z.string().min(1) },
 		handler: (args, client) => client.delete(`/v1/workspaces/${enc(args.id)}/apps/${enc(args.app_id)}`).then((r) => respond(r)),
 	},
@@ -77,7 +77,7 @@ export const workspacesTools: ToolDefinition[] = [
 		description: "Takes a database out of the workspace and returns it to the owning account.",
 		group: "workspaces",
 		route: ["DELETE", "/v1/workspaces/:id/databases/:db_id"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, database_id: z.string().min(1) },
 		handler: (args, client) =>
 			client.delete(`/v1/workspaces/${enc(args.id)}/databases/${enc(args.database_id)}`).then((r) => respond(r)),
@@ -96,7 +96,7 @@ export const workspacesTools: ToolDefinition[] = [
 		description: "Changes a workspace member's role.",
 		group: "workspaces",
 		route: ["PUT", "/v1/workspaces/:id/members/:user_id"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, user_id: z.string().min(1), role_id: z.string().min(1) },
 		handler: (args, client) =>
 			client.put(`/v1/workspaces/${enc(args.id)}/members/${enc(args.user_id)}`, { role_id: String(args.role_id) }).then((r) => respond(r)),
@@ -141,7 +141,7 @@ export const workspacesTools: ToolDefinition[] = [
 		description: "Changes a workspace role's name or permissions.",
 		group: "workspaces",
 		route: ["PUT", "/v1/workspaces/:id/roles/:role_id"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: {
 			id,
 			role_id: z.string().min(1),

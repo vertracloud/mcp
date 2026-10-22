@@ -120,7 +120,7 @@ export const appsTools: ToolDefinition[] = [
 			"Restarts the application. `reinstall_dependencies` reinstalls dependencies from scratch (ignoring the install cache); `force_build` runs the build command again even without a code change. Both count as a deploy against the plan's hourly limit.",
 		group: "apps",
 		route: ["POST", "/v1/apps/:id/restart"],
-		annotations: W,
+		annotations: D,
 		inputSchema: {
 			id,
 			workspace_id,
@@ -141,7 +141,7 @@ export const appsTools: ToolDefinition[] = [
 		description: "Turns the application off.",
 		group: "apps",
 		route: ["POST", "/v1/apps/:id/stop"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, workspace_id },
 		handler: (args, client) =>
 			client.post(`/v1/apps/${enc(args.id)}/stop`, undefined, { workspace_id: str(args.workspace_id) }).then((r) => respond(r)),

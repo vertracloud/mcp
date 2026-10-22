@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { readLocalFile } from "../local.js";
 import { respond, untrusted } from "../result.js";
-import { D, R, WI, type ToolDefinition } from "./defs.js";
+import { D, DI, R, type ToolDefinition } from "./defs.js";
 import { enc, guardLocal, str } from "./util.js";
 
 // `route` uses the catalog's own format so the scope is derived from it; the request goes to the Blob host
@@ -141,7 +141,7 @@ export const blobTools: ToolDefinition[] = [
 		description: "Changes a Blob Storage file between public and private. Public files get a permanent URL; private ones need a temporary link.",
 		group: "blob",
 		route: ["PATCH", "/v1/blob/objects/:object_id"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, visibility, workspace_id },
 		handler: (args, client) =>
 			client

@@ -36,7 +36,7 @@ export const networkTools: ToolDefinition[] = [
 		description: "Changes the application's public subdomain. Who is allowed to pick the name is determined by the plan.",
 		group: "network",
 		route: ["PATCH", "/v1/apps/:id/network/subdomain"],
-		annotations: WI,
+		annotations: DI,
 		inputSchema: { id, subdomain: z.string(), workspace_id },
 		handler: (args, client) =>
 			client
