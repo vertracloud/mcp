@@ -11,6 +11,7 @@ export type ToolGroup =
 	| "files"
 	| "network"
 	| "databases"
+	| "images"
 	| "snapshots"
 	| "account"
 	| "workspaces"

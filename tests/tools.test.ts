@@ -86,6 +86,29 @@ test("get_connection_info junta banco e certificado sem inventar credencial", as
 	assert.ok(String(info.note).length > 0);
 });
 
+test("string de conexão do usuário vertracloud, por engine", () => {
+	const p = { host: "h", port: 1, user: "vertracloud", password: "p", database: "vertracloud" };
+	assert.equal(connectionString("postgresql", { ...p, port: 5432 }), "postgresql://vertracloud:p@h:5432/vertracloud?sslmode=verify-ca");
+	assert.equal(connectionString("mysql", { ...p, port: 3306 }), "mysql://vertracloud:p@h:3306/vertracloud?ssl-mode=VERIFY_CA");
+	assert.equal(connectionString("mongodb", { ...p, port: 27017 }), "mongodb://vertracloud:p@h:27017/vertracloud?authSource=admin&tls=true");
+	assert.equal(connectionString("redis", { ...p, port: 6379 }), "rediss://vertracloud:p@h:6379");
+});
+
+test("get_connection_info usa o username da API e monta o banco vertracloud; legado fica como está", async () => {
+	const novo = stubFetch([{ body: { response: { id: "7", type: 2, host: "db.example", port: 27017, username: "vertracloud" } } }, { body: "pem" }]);
+	const info = parseResult(await tool("get_connection_info").handler({ id: "7" }, new VertraClient("k", { fetch: novo.fetch }))) as Record<string, unknown>;
+	assert.equal(info.user, "vertracloud");
+	assert.equal(info.database, "vertracloud");
+	assert.equal(info.connection_string, null);
+	assert.equal(info.connection_string_template, "mongodb://vertracloud:<password>@db.example:27017/vertracloud?authSource=admin&tls=true");
+
+	const legado = stubFetch([{ body: { response: { id: "8", type: 1, host: "db.example", port: 5432, username: "postgres" } } }, { body: "pem" }]);
+	const old = parseResult(await tool("get_connection_info").handler({ id: "8" }, new VertraClient("k", { fetch: legado.fetch }))) as Record<string, unknown>;
+	assert.equal(old.user, "postgres");
+	assert.equal(old.database, null);
+	assert.equal(old.connection_string_template, "postgresql://postgres:<password>@db.example:5432/?sslmode=verify-ca");
+});
+
 test("get_app_status sem id consulta a rota de todos", async () => {
 	const { fetch, calls } = stubFetch({ body: { response: [] } });
 	await tool("get_app_status").handler({}, new VertraClient("k", { fetch }));

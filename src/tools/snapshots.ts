@@ -35,19 +35,34 @@ export const snapshotsTools: ToolDefinition[] = [
 	},
 	{
 		name: "restore_snapshot",
-		description: "Restores a snapshot OVER the resource: the current content is replaced.",
+		description:
+			"Restores a snapshot OVER the resource: the current content is replaced. For an application on a custom image, `restore_image_version: true` also goes back to the image version it ran when the snapshot was taken, if that version still exists. When it does not, the data is restored and the response carries `warning: \"IMAGE_VERSION_NOT_FOUND\"`: the application stays on its current version.",
 		group: "snapshots",
 		route: ["POST", "/v1/users/:id/snapshots/:snapshot_id/restore"],
 		annotations: D,
-		inputSchema: { scope, resource_id, snapshot_id: z.string().min(1), target_id: z.string().optional().describe("Restore into a different resource") },
-		handler: (args, client) =>
-			client
+		inputSchema: {
+			scope,
+			resource_id,
+			snapshot_id: z.string().min(1),
+			target_id: z.string().optional().describe("Restore into a different resource"),
+			restore_image_version: z
+				.boolean()
+				.optional()
+				.describe("Applications on a custom image: also go back to the image version of the snapshot, if it still exists (default: data only)"),
+		},
+		handler: (args, client) => {
+			const body = {
+				...(args.target_id ? { resource_id: String(args.target_id) } : {}),
+				...(args.restore_image_version !== undefined ? { restore_image_version: Boolean(args.restore_image_version) } : {}),
+			};
+			return client
 				.post(
 					`/v1/users/${enc(args.resource_id)}/snapshots/${enc(args.snapshot_id)}/restore`,
-					args.target_id ? { resource_id: String(args.target_id) } : undefined,
+					Object.keys(body).length ? body : undefined,
 					{ scope: String(args.scope) },
 				)
-				.then((r) => respond(r)),
+				.then((r) => respond(r));
+		},
 	},
 	{
 		name: "download_snapshot",

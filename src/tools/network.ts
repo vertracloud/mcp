@@ -5,6 +5,14 @@ import { enc, pick, str } from "./util.js";
 
 const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional();
+
+/** Body of POST …/network/publish: `subdomain` and `port` only when given. */
+function publishBody(args: { subdomain?: unknown; port?: unknown }): Record<string, unknown> {
+	const body: Record<string, unknown> = {};
+	if (args.subdomain) body.subdomain = String(args.subdomain);
+	if (args.port !== undefined) body.port = Number(args.port);
+	return body;
+}
 const domain_id = z.string().min(1).describe("Domain ID (from `list_domains`)");
 const port = z.number().int().min(1).max(65535).describe("Application port that serves the domain, 1-65535 (default 80)");
 const pathPrefix = z
@@ -45,14 +53,19 @@ export const networkTools: ToolDefinition[] = [
 	},
 	{
 		name: "publish_app",
-		description: "Publishes the application on the web (public subdomain).",
+		description: "Publishes the application on the web (public subdomain). `port` is the port the image listens on: only for an application on a custom image, and required when it was created without web (IMAGE_APP_PORT_REQUIRED); ignored for other applications.",
 		group: "network",
 		route: ["POST", "/v1/apps/:id/network/publish"],
 		annotations: WI,
-		inputSchema: { id, subdomain: z.string().optional(), workspace_id },
+		inputSchema: {
+			id,
+			subdomain: z.string().optional(),
+			port: z.number().int().min(1).max(65535).optional().describe("Port the image listens on (1-65535), for an application on a custom image"),
+			workspace_id,
+		},
 		handler: (args, client) =>
 			client
-				.post(`/v1/apps/${enc(args.id)}/network/publish`, args.subdomain ? { subdomain: String(args.subdomain) } : {}, { workspace_id: str(args.workspace_id) })
+				.post(`/v1/apps/${enc(args.id)}/network/publish`, publishBody(args), { workspace_id: str(args.workspace_id) })
 				.then((r) => respond(r)),
 	},
 	{

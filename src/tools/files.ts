@@ -88,7 +88,7 @@ export const filesTools: ToolDefinition[] = [
 	},
 	{
 		name: "upload_files",
-		description: "Uploads files from the computer to a folder in the application.",
+		description: "Uploads files from the computer to a folder in the application. On an application that runs a custom image, the upload is a commit that rebuilds the image: the result carries `message` and `image_build` (`image_id`, `build_id`).",
 		group: "files",
 		route: ["POST", "/v1/apps/:id/files/upload"],
 		local: true,

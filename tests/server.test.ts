@@ -3,7 +3,16 @@ import { test } from "vitest";
 import { SERVER_INSTRUCTIONS, toolsFor } from "../src/server.js";
 import { tools } from "../src/tools/index.js";
 
-const LOCAL = ["create_app", "deploy_app", "upload_files", "upload_blob", "download_app", "download_snapshot"];
+const LOCAL = [
+	"create_app",
+	"deploy_app",
+	"upload_files",
+	"upload_blob",
+	"download_app",
+	"download_snapshot",
+	"create_image",
+	"rebuild_image",
+];
 
 test("o modo remoto (local: false) não registra as tools que tocam o disco", () => {
 	const remote = toolsFor(false).map((t) => t.name);

@@ -15,7 +15,13 @@ export function engineName(type: unknown): EngineName | "unknown" {
 	return found ?? "unknown";
 }
 
-/** Connection string per engine. Without user/password, returns `null` (never invents a credential). */
+/** Customer user of databases created since v26.4.8 (no superuser); its default database has the same name. */
+const CUSTOMER_USER = "vertracloud";
+
+/**
+ * Connection string per engine. Without user/password, returns `null` (never invents a credential).
+ * For the `vertracloud` user, MongoDB authenticates against `admin`.
+ */
 export function connectionString(engine: EngineName | "unknown", parts: { host?: string; port?: number; user?: string; password?: string; database?: string }): string | null {
 	const { host, port, user, password, database } = parts;
 	if (!host || !port || !user || !password) return null;
@@ -29,7 +35,7 @@ export function connectionString(engine: EngineName | "unknown", parts: { host?:
 		case "redis":
 			return `rediss://${auth}@${host}:${port}`;
 		case "mongodb":
-			return `mongodb://${auth}@${host}:${port}${db}?tls=true`;
+			return `mongodb://${auth}@${host}:${port}${db}?${user === CUSTOMER_USER ? "authSource=admin&" : ""}tls=true`;
 		default:
 			return null;
 	}
@@ -46,8 +52,18 @@ export const databasesTools: ToolDefinition[] = [
 		handler: (_args, client) => client.get("/v1/databases/status").then((r) => respond(r)),
 	},
 	{
+		name: "list_database_versions",
+		description:
+			"Lists, per engine, the version lines a new database can use: `recommended` and `available` (newest first). The keys are the engine type ids (1 PostgreSQL, 2 MongoDB, 3 Redis, 4 MySQL). Use it before `create_database` with `version`.",
+		group: "databases",
+		route: ["GET", "/v1/databases/versions"],
+		annotations: R,
+		inputSchema: {},
+		handler: (_args, client) => client.get("/v1/databases/versions").then((r) => respond(r)),
+	},
+	{
 		name: "get_database",
-		description: "Details of a database: engine, name, memory, address and port.",
+		description: "Details of a database: engine, version line (e.g. \"18\"), name, memory, address and port. The version of an existing database cannot be changed.",
 		group: "databases",
 		route: ["GET", "/v1/databases/:id"],
 		annotations: R,
@@ -82,7 +98,8 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "create_database",
-		description: "Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first.",
+		description:
+			"Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. `version` is the engine's version line (e.g. \"18\", \"8.4\"); omit it to get the recommended one — call `list_database_versions` to see the valid lines. Wrong lines fail with INVALID_DATABASE_VERSION. The version of an existing database cannot be changed afterwards.",
 		group: "databases",
 		route: ["POST", "/v1/databases"],
 		annotations: W,
@@ -90,6 +107,11 @@ export const databasesTools: ToolDefinition[] = [
 			engine: z.enum(["postgresql", "mongodb", "redis", "mysql"]),
 			name: z.string(),
 			ram: z.number().int().positive().describe("RAM in MB"),
+			version: z
+				.string()
+				.min(1)
+				.optional()
+				.describe("Engine version line, e.g. \"18\" or \"8.4\" (never a patch). Omitted = the recommended one. Valid lines per engine: `list_database_versions`."),
 			description: z.string().optional(),
 			workspace_id: z.string().optional(),
 		},
@@ -99,7 +121,7 @@ export const databasesTools: ToolDefinition[] = [
 					type: ENGINES[args.engine as EngineName],
 					name: String(args.name),
 					ram: Number(args.ram),
-					...pick(args, ["description", "workspace_id"]),
+					...pick(args, ["version", "description", "workspace_id"]),
 				})
 				.then((r) => respond(r)),
 	},
@@ -158,7 +180,7 @@ export const databasesTools: ToolDefinition[] = [
 	{
 		name: "get_connection_info",
 		description:
-			"Data to connect to the database: address, port, engine, CA certificate in PEM and, when the account has one, a ready-made connection string. This server does not run queries — you're the one who connects.",
+			"Data to connect to the database: address, port, engine, user name, CA certificate in PEM and a connection string (with a `<password>` placeholder, since the API never returns the password). This server does not run queries — you're the one who connects.",
 		group: "databases",
 		route: ["GET", "/v1/databases/:id/credentials/certificate"],
 		annotations: R,
@@ -176,14 +198,16 @@ export const databasesTools: ToolDefinition[] = [
 			const parts = {
 				host: str(body.host),
 				port: body.port === undefined ? undefined : Number(body.port),
-				// The API does not return user/password/database name on read; when it does, pass it through.
+				// The API returns `username` (`vertracloud` on databases created since v26.4.8; the engine's own
+				// user on older ones). It never returns the password; the database name is only implied for `vertracloud`.
 				user: str(body.username ?? body.user),
 				password: str(body.password),
-				database: str(body.database ?? body.database_name),
+				database: str(body.database ?? body.database_name) ?? (str(body.username) === CUSTOMER_USER ? CUSTOMER_USER : undefined),
 			};
 			return ok({
 				id: body.id,
 				engine,
+				version: body.version ?? null,
 				host: parts.host,
 				port: parts.port,
 				user: parts.user ?? null,
@@ -192,10 +216,12 @@ export const databasesTools: ToolDefinition[] = [
 				ca_pem: cert.ok ? Buffer.from(cert.body as Uint8Array).toString("utf8") : null,
 				ca_error: cert.ok ? undefined : cert.body,
 				connection_string: connectionString(engine, parts),
+				// Same URL with a placeholder instead of the password, when only the password is missing.
+				connection_string_template: parts.password ? undefined : connectionString(engine, { ...parts, password: "<password>" })?.replace("%3Cpassword%3E", "<password>"),
 				note:
 					parts.user && parts.password
 						? undefined
-						: "User and password are not returned by the API on this read — get them from the dashboard, or generate a new password with `reset_credentials`.",
+						: "The password is not returned by the API on this read — use the one you saved when the database was created, or generate a new one with `reset_credentials`.",
 			});
 		},
 	},

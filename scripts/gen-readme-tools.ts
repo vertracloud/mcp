@@ -14,6 +14,7 @@ const GROUP_TITLES: Record<ToolGroup, string> = {
 	files: "Files",
 	network: "Network and domains",
 	databases: "Databases",
+	images: "Docker images",
 	snapshots: "Snapshots",
 	account: "Account",
 	workspaces: "Workspaces",

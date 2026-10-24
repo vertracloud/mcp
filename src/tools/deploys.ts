@@ -41,14 +41,20 @@ export const deploysTools: ToolDefinition[] = [
 			repo_name: z.string().describe("Repository name"),
 			repo_id: z.string().describe("Numeric ID of the repository on GitHub"),
 			account_id: z.string().describe("Numeric ID of the GitHub App installation/account"),
+			branch: z
+				.string()
+				.optional()
+				.describe("Only deploy on pushes to this branch. Omit it to deploy on pushes to main or master. Linking again with another branch changes it."),
 			workspace_id,
 		},
 		handler: (args, client) => {
+			const branch = str(args.branch);
 			const body: RESTPostAPIApplicationWebhookCreateBody = {
 				owner: String(args.owner),
 				repo_name: String(args.repo_name),
 				repo_id: String(args.repo_id),
 				account_id: String(args.account_id),
+				...(branch !== undefined ? { branch } : {}),
 			};
 			return client
 				.post(`/v1/apps/${enc(args.id)}/deploys/webhook`, body, { workspace_id: str(args.workspace_id) })
