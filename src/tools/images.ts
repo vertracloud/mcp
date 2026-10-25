@@ -173,7 +173,7 @@ export const imagesTools: ToolDefinition[] = [
 	{
 		name: "delete_image",
 		description:
-			"DELETES the image permanently: its versions, its build context and EVERY application created from it. `confirm_name` must be exactly the image's name, or the call fails with IMAGE_NAME_MISMATCH. Refused with IMAGE_BUILD_IN_PROGRESS while a build runs. When the image has apps, the key also needs the `apps:delete` scope.",
+			"DELETES the image permanently: its versions, its build context and EVERY application created from it. `confirm_name` must be exactly the image's name, or the call fails with IMAGE_NAME_MISMATCH. Refused with IMAGE_BUILD_IN_PROGRESS while a build runs. When the image has apps, the key also needs the `apps:delete` scope (`images:write` does not cover deleting).",
 		group: "images",
 		route: ["DELETE", "/v1/images/:image_id"],
 		annotations: D,

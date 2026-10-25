@@ -185,7 +185,7 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "deploy_app",
 		description:
-			"Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`. Returns 409 APP_BUILDING if the application is still in its first build: wait with `wait_for_app` first. On an application that runs a custom image, the upload is a commit that rebuilds the image: the result carries `message` and `image_build` (`image_id`, `build_id`), and the application restarts when the build succeeds.",
+			"Uploads a folder from the computer to an existing application (new deploy), using the same compression criteria as `create_app`. Returns 409 APP_BUILDING if the application is still in its first build: wait with `wait_for_app` first. On an application that runs a custom image, the upload is a commit that rebuilds the image: the result carries `message` and `image_build` (`image_id`, `build_id`), and the application restarts when the build succeeds. The key also needs the `images:write` scope for that.",
 		group: "apps",
 		route: ["POST", "/v1/apps/:id/files/upload"],
 		local: true,

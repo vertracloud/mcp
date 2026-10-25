@@ -20,7 +20,7 @@ const IMAGE_TOOLS: Record<string, string> = {
 	create_image: "images:write",
 	update_image: "images:write",
 	rebuild_image: "images:write",
-	delete_image: "images:write",
+	delete_image: "images:delete",
 	list_image_versions: "images:read",
 	get_image_build_log: "images:read",
 	// Route `POST /v1/apps/image` belongs to the apps catalog, so the key needs apps:write.
@@ -58,7 +58,7 @@ test("as rotas de imagem existem no catálogo com o escopo esperado", () => {
 	assert.equal(scopeForRoute("POST", "/v1/images"), "images:write");
 	assert.equal(scopeForRoute("PATCH", "/v1/images/:image_id"), "images:write");
 	assert.equal(scopeForRoute("PUT", "/v1/images/:image_id"), "images:write");
-	assert.equal(scopeForRoute("DELETE", "/v1/images/:image_id"), "images:write");
+	assert.equal(scopeForRoute("DELETE", "/v1/images/:image_id"), "images:delete");
 	assert.equal(scopeForRoute("GET", "/v1/images/:image_id/logs"), "images:read");
 	assert.equal(scopeForRoute("POST", "/v1/apps/image"), "apps:write");
 });
