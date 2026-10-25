@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/vertracloud/mcp/compare/v0.3.0...v0.3.1) (2026-10-25)
+
+
+### Features
+
+* add Docker image tools, database versions and the API username in connection info ([48b03b7](https://github.com/vertracloud/mcp/commit/48b03b7e1cd40f7628a0cba10e625155e2510753))
+
 ## [0.3.0](https://github.com/vertracloud/mcp/compare/v0.2.2...v0.3.0) (2026-10-22)
 
 
