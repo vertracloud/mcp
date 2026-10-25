@@ -101,7 +101,7 @@ export const imagesTools: ToolDefinition[] = [
 		group: "images",
 		route: ["POST", "/v1/images"],
 		// One tool for both sources, so it stays `local` (the stdio server): the GitHub path needs no disk, but
-		// splitting it would add a ninth tool to the M1 list. Remote clients do not get `create_image` at all.
+		// splitting it would add a ninth tool to the images group. Remote clients do not get `create_image` at all.
 		local: true,
 		annotations: W,
 		inputSchema: {
