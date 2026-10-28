@@ -41,6 +41,8 @@ interface RequestInput {
 	form?: FormData;
 	/** Returns the body as a Uint8Array instead of JSON (zip/PEM/CSV download). */
 	binary?: boolean;
+	/** Extra request headers (for example `Idempotency-Key`); never `Authorization`. */
+	headers?: Record<string, string>;
 }
 
 export class VertraClient {
@@ -72,6 +74,7 @@ export class VertraClient {
 
 	async request<T = unknown>(input: RequestInput): Promise<ApiResult<T>> {
 		const headers: Record<string, string> = {
+			...input.headers,
 			Authorization: `Bearer ${this.apiKey}`,
 			"User-Agent": "vertracloud-mcp",
 		};
@@ -132,8 +135,8 @@ export class VertraClient {
 	get<T = unknown>(path: string, query?: Query) {
 		return this.request<T>({ method: "GET", path, query });
 	}
-	post<T = unknown>(path: string, body?: unknown, query?: Query) {
-		return this.request<T>({ method: "POST", path, body, query });
+	post<T = unknown>(path: string, body?: unknown, query?: Query, headers?: Record<string, string>) {
+		return this.request<T>({ method: "POST", path, body, query, headers });
 	}
 	put<T = unknown>(path: string, body?: unknown, query?: Query) {
 		return this.request<T>({ method: "PUT", path, body, query });

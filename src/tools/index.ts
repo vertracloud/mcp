@@ -15,6 +15,8 @@ import { networkTools } from "./network.js";
 import { releasesTools } from "./releases.js";
 import { resourceOrganizationTools } from "./resource-organization.js";
 import { snapshotsTools } from "./snapshots.js";
+import { stacksTools } from "./stacks.js";
+import { templatesTools } from "./templates.js";
 import { workspacesTools } from "./workspaces.js";
 
 export const tools: ToolDefinition[] = [
@@ -33,4 +35,6 @@ export const tools: ToolDefinition[] = [
 	...workspacesTools,
 	...billingTools,
 	...blobTools,
+	...templatesTools,
+	...stacksTools,
 ];

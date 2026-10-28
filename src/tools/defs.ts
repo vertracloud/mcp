@@ -16,7 +16,9 @@ export type ToolGroup =
 	| "account"
 	| "workspaces"
 	| "billing"
-	| "blob";
+	| "blob"
+	| "templates"
+	| "stacks";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 /** Route in the catalog's format (`["GET", "/v1/apps/:id/logs"]`), not the final URL. */

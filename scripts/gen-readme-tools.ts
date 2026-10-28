@@ -20,6 +20,8 @@ const GROUP_TITLES: Record<ToolGroup, string> = {
 	workspaces: "Workspaces",
 	billing: "Billing",
 	blob: "Blob storage",
+	templates: "Templates",
+	stacks: "Stacks",
 };
 
 export function renderToolsTable(): string {

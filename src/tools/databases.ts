@@ -180,11 +180,15 @@ export const databasesTools: ToolDefinition[] = [
 	{
 		name: "get_connection_info",
 		description:
-			"Data to connect to the database: address, port, engine, user name, CA certificate in PEM and a connection string (with a `<password>` placeholder, since the API never returns the password). This server does not run queries — you're the one who connects.",
+			"Data to connect to the database: address, port, engine, user name, CA certificate in PEM and a connection string (with a `<password>` placeholder, since the API never returns the password). This server does not run queries — you're the one who connects. With `app_id` (an application linked to this database in a stack) it also returns `how_to_connect`: code in the application's language, with the real names of the variables the platform injected.",
 		group: "databases",
 		route: ["GET", "/v1/databases/:id/credentials/certificate"],
 		annotations: R,
-		inputSchema: { id, workspace_id },
+		inputSchema: {
+			id,
+			app_id: z.string().optional().describe("Application linked to this database in a stack; adds the \"how to connect\" code for it"),
+			workspace_id,
+		},
 		handler: async (args, client) => {
 			const query = { workspace_id: str(args.workspace_id) };
 			const [db, cert] = await Promise.all([
@@ -204,6 +208,20 @@ export const databasesTools: ToolDefinition[] = [
 				password: str(body.password),
 				database: str(body.database ?? body.database_name) ?? (str(body.username) === CUSTOMER_USER ? CUSTOMER_USER : undefined),
 			};
+			const appId = str(args.app_id);
+			const stackId = str(body.stack_id);
+			let howToConnect: unknown = null;
+			let howToConnectNote: string | undefined;
+			let howToConnectError: unknown;
+			if (appId !== undefined) {
+				if (!stackId) {
+					howToConnectNote = "This database is not in a stack, so there is no link to an application to build the code from.";
+				} else {
+					const conn = await client.get(`/v1/stacks/${enc(stackId)}/connection`, { app_id: appId, workspace_id: query.workspace_id });
+					if (conn.ok) howToConnect = conn.body;
+					else howToConnectError = conn.body;
+				}
+			}
 			return ok({
 				id: body.id,
 				engine,
@@ -218,6 +236,9 @@ export const databasesTools: ToolDefinition[] = [
 				connection_string: connectionString(engine, parts),
 				// Same URL with a placeholder instead of the password, when only the password is missing.
 				connection_string_template: parts.password ? undefined : connectionString(engine, { ...parts, password: "<password>" })?.replace("%3Cpassword%3E", "<password>"),
+				...(appId !== undefined
+					? { how_to_connect: howToConnect, how_to_connect_note: howToConnectNote, how_to_connect_error: howToConnectError }
+					: {}),
 				note:
 					parts.user && parts.password
 						? undefined
