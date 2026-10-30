@@ -57,6 +57,9 @@ test("list_templates repassa os filtros e rejeita categoria inválida", async ()
 	const schema = schemaOf("list_templates");
 	assert.equal(schema.safeParse({ category: "nope" }).success, false);
 	assert.equal(schema.safeParse({ category: "automation", fits: true, sort: "popular", limit: 10 }).success, true);
+	// O teto é o da api (`limit` até 50); 51 seria 400 do outro lado.
+	assert.equal(schema.safeParse({ limit: 50 }).success, true);
+	assert.equal(schema.safeParse({ limit: 51 }).success, false);
 
 	const { fetch, calls } = stubFetch({ body: { response: [], meta: {} } });
 	await tool("list_templates").handler({ search: "n8n", category: "automation", fits: true, page: 2 }, new VertraClient("k", { fetch }));

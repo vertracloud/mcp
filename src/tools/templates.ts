@@ -62,7 +62,7 @@ export const templatesTools: ToolDefinition[] = [
 			fits: z.boolean().optional().describe("`true` keeps only the templates that fit your account right now"),
 			sort: z.enum(["recommended", "popular", "newest", "name"]).optional(),
 			page: z.number().int().min(1).optional(),
-			limit: z.number().int().min(1).max(100).optional(),
+			limit: z.number().int().min(1).max(50).optional().describe("At most 50, the limit of the API"),
 			workspace_id,
 		},
 		handler: (args, client) =>
@@ -119,7 +119,7 @@ export const templatesTools: ToolDefinition[] = [
 				)
 				.optional()
 				.describe("Per-service overrides, keyed by service id"),
-			network_mode: z.enum(["public"]).optional().describe("Network mode of the stack (only `public` for now)"),
+			network_mode: z.enum(["public"]).optional().describe("Network mode of the stack"),
 			workspace_id: z.string().optional().describe("Workspace that will own what the deploy creates"),
 			folder_id: z.string().optional().describe("Folder to put it in"),
 			wait: z.boolean().optional().describe("Follow the job until it finishes (default true). `false` returns right after the job is accepted."),
