@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2](https://github.com/vertracloud/mcp/compare/v0.3.1...v0.3.2) (2026-10-30)
+
+
+### Features
+
+* add templates and stacks tools ([2a99f10](https://github.com/vertracloud/mcp/commit/2a99f10b05bba7c7e91432829a84810a63ba328f))
+
+
+### Bug Fixes
+
+* **templates:** neutral network mode descriptions ([a21c193](https://github.com/vertracloud/mcp/commit/a21c1939db7e7257a8c7bed27d9a8958ef76ec8f))
+
 ## [0.3.1](https://github.com/vertracloud/mcp/compare/v0.3.0...v0.3.1) (2026-10-25)
 
 
