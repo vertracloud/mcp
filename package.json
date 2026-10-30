@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
-    "@vertracloud/api-types": "0.5.4",
+    "@vertracloud/api-types": "0.5.5",
     "adm-zip": "^0.5.16",
     "zod": "^3.25.0"
   },
