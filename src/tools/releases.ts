@@ -60,7 +60,7 @@ export const releasesTools: ToolDefinition[] = [
 	{
 		name: "rollback_app",
 		description:
-			"Rolls the application back to a previous release: its code goes back to that version and the application restarts. Data the application wrote while running is kept. Environment variables are kept as they are unless `restore_environment` is true, which also needs the `apps:envs` scope; run `preview_rollback` first in that case. Possible errors: PLAN_DOES_NOT_SUPPORT_ROLLBACK, RELEASE_EXPIRED, RELEASE_ALREADY_ACTIVE, RESTORE_COOLDOWN, OPERATION_IN_PROGRESS.",
+			"Rolls the application back to a previous release: its code goes back to that version and the application restarts. Data the application wrote while running is kept. Environment variables are kept as they are unless `restore_environment` is true, which also needs the `apps:envs` scope; run `preview_rollback` first in that case. Possible errors: RELEASE_EXPIRED, RELEASE_ALREADY_ACTIVE, RESTORE_COOLDOWN, OPERATION_IN_PROGRESS.",
 		group: "deploys",
 		route: ["POST", "/v1/apps/:id/releases/:release_id/rollback"],
 		annotations: D,

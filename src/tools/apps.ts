@@ -215,7 +215,7 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "update_app_config",
-		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime \"on\" and auto rollback depend on the plan (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK).",
+		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime \"on\" and auto rollback depend on the plan; `list_plans` shows which plans have them (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK).",
 		group: "apps",
 		route: ["PATCH", "/v1/apps/:id/config"],
 		annotations: DI,

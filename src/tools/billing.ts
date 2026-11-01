@@ -1,25 +1,70 @@
-import type { RESTPostAPIOrderCreateBody } from "@vertracloud/api-types/v1";
+import type { APIPlan, APIPlansCatalog, RESTPostAPIOrderCreateBody, RESTPostAPIOrderQuoteBody } from "@vertracloud/api-types/v1";
 import { z } from "zod";
-import { fetchKnowledgeBase, sliceSection } from "../docs-fetch.js";
 import { fail, ok, respond } from "../result.js";
 import { R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick, str } from "./util.js";
 
+function slimPlan(p: APIPlan) {
+	return {
+		name: p.name,
+		family: p.family,
+		legacy: p.legacy || undefined,
+		memory_mb: p.memory_mb,
+		max_vcpus_per_app: p.max_vcpus_per_app,
+		price: p.price,
+		payment_methods: p.payment_methods,
+		limits: {
+			deploys_per_hour: p.limits.deploys_per_hour,
+			requests_per_minute: p.limits.requests_per_minute,
+			max_domains: p.limits.max_domains,
+			manual_backups_per_day: p.limits.manual_backups_per_day,
+			workspace_members: p.limits.workspace_members,
+			release_versions: p.limits.release_versions,
+			max_custom_images: p.limits.max_custom_images,
+			blob_quota_bytes: p.limits.blob.quota_bytes,
+		},
+		features: {
+			custom_subdomain: p.features.custom_subdomain,
+			create_workspace: p.features.create_workspace,
+			database_manager: p.features.database_manager,
+			rollback: p.features.rollback,
+			auto_rollback: p.features.auto_rollback,
+			zero_downtime: p.features.zero_downtime,
+		},
+	};
+}
+
+/** Compact answer for the agent: the grid, the cycles and the main numbers of each plan. */
+function slimCatalog({ grid, cycles, plans }: APIPlansCatalog) {
+	return { grid, cycles, plans: plans.map(slimPlan) };
+}
+
 export const billingTools: ToolDefinition[] = [
 	{
 		name: "list_plans",
-		description: "Plans and prices, straight from the public knowledge base (not from a route).",
+		description:
+			"The plans currently for sale, straight from the API: the grid in force, the billing cycles with their discounts and, per plan, name, RAM, vCPU per app, monthly price (BRL), payment methods and the main limits and features. Use it before stating any plan, price or limit; `quote_order` gives the exact amount for a plan and cycle.",
 		group: "billing",
 		scope: null,
 		annotations: R,
 		inputSchema: {},
-		handler: async () => {
-			try {
-				const markdown = await fetchKnowledgeBase();
-				return ok(sliceSection(markdown, "plano") ?? markdown);
-			} catch (err) {
-				return fail({ code: "DOCS_UNAVAILABLE", message: err instanceof Error ? err.message : String(err) });
-			}
+		handler: (_args, client) => client.get("/v1/plans").then((r) => respond(r, (body) => slimCatalog(body as APIPlansCatalog))),
+	},
+	{
+		name: "quote_order",
+		description:
+			"Prices a plan for a billing cycle, with an optional coupon, without creating an order or using the coupon: list price, cycle discount, coupon discount, final `total` and whether the price is the one the account had before the current grid (`legacy_price`, valid until `legacy_price_until`). Use it to tell the user the exact amount before `create_order`. Possible errors: INVALID_PLAN, INVALID_MONTHS, PLAN_NOT_FOR_SALE and the COUPON_* codes.",
+		group: "billing",
+		route: ["POST", "/v1/orders/quote"],
+		annotations: R,
+		inputSchema: {
+			plan: z.string().min(1).describe("Plan name, as returned by `list_plans`"),
+			months: z.number().int().positive().describe("Billing cycle in months: 1, 3, 6 or 12; discounts in `list_plans`"),
+			coupon: z.string().optional().describe("Discount coupon"),
+		},
+		handler: (args, client) => {
+			const body = { plan: String(args.plan), months: Number(args.months), coupon: str(args.coupon) } as RESTPostAPIOrderQuoteBody;
+			return client.post("/v1/orders/quote", body).then((r) => respond(r));
 		},
 	},
 	{
@@ -30,13 +75,13 @@ export const billingTools: ToolDefinition[] = [
 		annotations: W,
 		inputSchema: {
 			plan: z.string().describe("Desired plan"),
-			months: z.number().int().positive().describe("Number of months: 1, 3 or 12 (3 months get 5% off, 12 get 15% off). The Economy plan only accepts 1."),
+			months: z.number().int().positive().describe("Number of months: 1, 3, 6 or 12; discounts in `list_plans`"),
 			coupon: z.string().optional().describe("Discount coupon"),
 		},
 		handler: (args, client) => {
 			// `type` is not exposed to the agent: without a dedicated renewal/upgrade tool, the
 			// order is always a new purchase; the server already defaults to that.
-			const body: RESTPostAPIOrderCreateBody = { plan: String(args.plan), months: Number(args.months), coupon: str(args.coupon) };
+			const body: RESTPostAPIOrderCreateBody = { plan: String(args.plan), months: Number(args.months) as RESTPostAPIOrderCreateBody["months"], coupon: str(args.coupon) };
 			return client.post("/v1/orders", body).then((r) => respond(r));
 		},
 	},
