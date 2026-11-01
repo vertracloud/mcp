@@ -34,16 +34,16 @@ function slimPlan(p: APIPlan) {
 	};
 }
 
-/** Compact answer for the agent: the grid, the cycles and the main numbers of each plan. */
-function slimCatalog({ grid, cycles, plans }: APIPlansCatalog) {
-	return { grid, cycles, plans: plans.map(slimPlan) };
+/** Compact answer for the agent: the cycles and the main numbers of each plan. */
+function slimCatalog({ cycles, plans }: APIPlansCatalog) {
+	return { cycles, plans: plans.map(slimPlan) };
 }
 
 export const billingTools: ToolDefinition[] = [
 	{
 		name: "list_plans",
 		description:
-			"The plans currently for sale, straight from the API: the grid in force, the billing cycles with their discounts and, per plan, name, RAM, vCPU per app, monthly price (BRL), payment methods and the main limits and features. Use it before stating any plan, price or limit; `quote_order` gives the exact amount for a plan and cycle.",
+			"The plans currently for sale, straight from the API: the billing cycles with their discounts and, per plan, name, RAM, vCPU per app, monthly price (BRL), payment methods and the main limits and features. Use it before stating any plan, price or limit; `quote_order` gives the exact amount for a plan and cycle.",
 		group: "billing",
 		scope: null,
 		annotations: R,

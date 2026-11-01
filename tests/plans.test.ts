@@ -35,17 +35,16 @@ const plan = {
 	},
 	features: { custom_subdomain: true, create_workspace: true, database_manager: false, rollback: true, auto_rollback: false, zero_downtime: true, web_published: true },
 };
-const catalog = { grid: "v3", cycles: [{ months: 1, discount_percent: 0 }, { months: 12, discount_percent: 25 }], plans: [plan] };
+const catalog = { cycles: [{ months: 1, discount_percent: 0 }, { months: 12, discount_percent: 25 }], plans: [plan] };
 
-test("list_plans lê GET /v1/plans e devolve a grade enxuta", async () => {
+test("list_plans lê GET /v1/plans e devolve o catálogo enxuto", async () => {
 	const { fetch, calls } = stubFetch({ body: { response: catalog } });
 	const result = await tool("list_plans").handler({}, new VertraClient("k", { fetch }));
 
 	assert.equal(calls.length, 1);
 	assert.equal(calls[0]?.method, "GET");
 	assert.ok(calls[0]?.url.endsWith("/v1/plans"));
-	const out = parseResult(result) as { grid: string; cycles: unknown[]; plans: Record<string, unknown>[] };
-	assert.equal(out.grid, "v3");
+	const out = parseResult(result) as { cycles: unknown[]; plans: Record<string, unknown>[] };
 	assert.deepEqual(out.cycles, catalog.cycles);
 	assert.equal(out.plans[0]?.name, "starter-2");
 	assert.equal(out.plans[0]?.price, 29.9);
