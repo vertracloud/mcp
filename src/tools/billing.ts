@@ -53,7 +53,7 @@ export const billingTools: ToolDefinition[] = [
 	{
 		name: "quote_order",
 		description:
-			"Prices a plan for a billing cycle, with an optional coupon, without creating an order or using the coupon: list price, cycle discount, coupon discount, final `total` and whether the price is the one the account had before the current grid (`legacy_price`, valid until `legacy_price_until`). Use it to tell the user the exact amount before `create_order`. Possible errors: INVALID_PLAN, INVALID_MONTHS, PLAN_NOT_FOR_SALE and the COUPON_* codes.",
+			"Prices a plan for a billing cycle, with an optional coupon, without creating an order or using the coupon: list price, cycle discount, coupon discount, final `total` and whether a price kept from the account's earlier plan applies (`legacy_price`, valid until `legacy_price_until`). Use it to tell the user the exact amount before `create_order`. Possible errors: INVALID_PLAN, INVALID_MONTHS, PLAN_NOT_FOR_SALE and the COUPON_* codes.",
 		group: "billing",
 		route: ["POST", "/v1/orders/quote"],
 		annotations: R,

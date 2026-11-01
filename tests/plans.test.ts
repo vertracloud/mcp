@@ -81,9 +81,9 @@ test("quote_order faz POST /v1/orders/quote com o escopo billing:read", async ()
 
 test("quote_order sem cupom não envia o campo e repassa COUPON_*", async () => {
 	const { fetch, calls } = stubFetch({ status: 400, body: { code: "PLAN_NOT_FOR_SALE" } });
-	const result = await tool("quote_order").handler({ plan: "economy", months: 1 }, new VertraClient("k", { fetch }));
+	const result = await tool("quote_order").handler({ plan: "starter-1", months: 1 }, new VertraClient("k", { fetch }));
 
-	assert.deepEqual(JSON.parse(String(calls[0]?.body)), { plan: "economy", months: 1 });
+	assert.deepEqual(JSON.parse(String(calls[0]?.body)), { plan: "starter-1", months: 1 });
 	assert.equal(result.isError, true);
 	assert.deepEqual(parseResult(result), { code: "PLAN_NOT_FOR_SALE" });
 });
