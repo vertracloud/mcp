@@ -70,11 +70,11 @@ test("quote_order faz POST /v1/orders/quote com o escopo billing:read", async ()
 
 	const quote = { plan: "pro-4", months: 6, list_price: 600, period_discount_percent: 15, coupon: null, total: 510, legacy_price: false, legacy_price_until: null, payment_methods: ["pix"] };
 	const { fetch, calls } = stubFetch({ body: { response: quote } });
-	const result = await tool("quote_order").handler({ plan: "pro-4", months: 6, coupon: "V3-X" }, new VertraClient("k", { fetch }));
+	const result = await tool("quote_order").handler({ plan: "pro-4", months: 6, coupon: "PROMO-X" }, new VertraClient("k", { fetch }));
 
 	assert.equal(calls[0]?.method, "POST");
 	assert.ok(calls[0]?.url.endsWith("/v1/orders/quote"));
-	assert.deepEqual(JSON.parse(String(calls[0]?.body)), { plan: "pro-4", months: 6, coupon: "V3-X" });
+	assert.deepEqual(JSON.parse(String(calls[0]?.body)), { plan: "pro-4", months: 6, coupon: "PROMO-X" });
 	assert.deepEqual(parseResult(result), quote);
 });
 
