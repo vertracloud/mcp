@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.3](https://github.com/vertracloud/mcp/compare/v0.3.2...v0.3.3) (2026-11-01)
+
+
+### Features
+
+* read list_plans from the API and add quote_order ([d1cdcb4](https://github.com/vertracloud/mcp/commit/d1cdcb4e5982b52a8fb1c96cd0a268115c177d02))
+
+
+### Bug Fixes
+
+* describe legacy_price without the previous plan names ([e874a77](https://github.com/vertracloud/mcp/commit/e874a773bc58cb63de5d6a5f901dafb890d9dd01))
+* drop the grid field from list_plans ([6022297](https://github.com/vertracloud/mcp/commit/602229775fb5606e3afbf1cf1371498c9cd8ffd3))
+
 ## [0.3.2](https://github.com/vertracloud/mcp/compare/v0.3.1...v0.3.2) (2026-10-30)
 
 
