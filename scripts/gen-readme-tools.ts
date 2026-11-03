@@ -9,6 +9,7 @@ const END = "<!-- tools:end -->";
 const GROUP_TITLES: Record<ToolGroup, string> = {
 	docs: "Documentation",
 	apps: "Applications",
+	analytics: "Web analytics",
 	deploys: "Deploys",
 	envs: "Environment variables",
 	files: "Files",

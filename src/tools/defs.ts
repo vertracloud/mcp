@@ -6,6 +6,7 @@ import type { ToolResult } from "../result.js";
 export type ToolGroup =
 	| "docs"
 	| "apps"
+	| "analytics"
 	| "deploys"
 	| "envs"
 	| "files"

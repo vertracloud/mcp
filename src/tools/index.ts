@@ -2,6 +2,7 @@ export * from "./defs.js";
 import type { ToolDefinition } from "./defs.js";
 
 import { accountTools } from "./account.js";
+import { analyticsTools } from "./analytics.js";
 import { appsTools } from "./apps.js";
 import { billingTools } from "./billing.js";
 import { blobTools } from "./blob.js";
@@ -22,6 +23,7 @@ import { workspacesTools } from "./workspaces.js";
 export const tools: ToolDefinition[] = [
 	...docsTools,
 	...appsTools,
+	...analyticsTools,
 	...deploysTools,
 	...releasesTools,
 	...envsTools,
