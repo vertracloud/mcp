@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/vertracloud/mcp/compare/v0.3.3...v0.3.4) (2026-11-03)
+
+
+### Features
+
+* add web analytics tools ([bb73774](https://github.com/vertracloud/mcp/commit/bb73774a78fc59f825118dbac02fd630f9bbbce3))
+
 ## [0.3.3](https://github.com/vertracloud/mcp/compare/v0.3.2...v0.3.3) (2026-11-01)
 
 
