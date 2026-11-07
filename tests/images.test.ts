@@ -385,6 +385,19 @@ test("update_image limpa a descrição com null ou texto vazio, e o schema limit
 	assert.equal(schema.safeParse({ id: "img1", description: "x".repeat(128) }).success, true);
 });
 
+test("update_image repassa auto_update_apps (true e false) e o schema só aceita booleano", async () => {
+	const { fetch, calls } = stubFetch({ body: { response: {} } });
+	const client = new VertraClient("k", { fetch });
+	await tool("update_image").handler({ id: "img1", auto_update_apps: true }, client);
+	await tool("update_image").handler({ id: "img1", auto_update_apps: false }, client);
+	assert.deepEqual(JSON.parse(String(calls[0]?.body)), { auto_update_apps: true });
+	assert.deepEqual(JSON.parse(String(calls[1]?.body)), { auto_update_apps: false });
+
+	const schema = z.object(tool("update_image").inputSchema as z.ZodRawShape);
+	assert.equal(schema.safeParse({ id: "img1", auto_update_apps: true }).success, true);
+	assert.equal(schema.safeParse({ id: "img1", auto_update_apps: "yes" }).success, false);
+});
+
 test("update_image repassa o erro de nome em uso", async () => {
 	const { fetch } = stubFetch({ status: 400, body: { code: "VALIDATION_ERROR", details: { path: "name" } } });
 	const result = await tool("update_image").handler({ id: "img1", name: "taken" }, new VertraClient("k", { fetch }));

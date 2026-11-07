@@ -86,7 +86,7 @@ export const imagesTools: ToolDefinition[] = [
 	{
 		name: "get_image",
 		description:
-			"Details of a custom image: `status` of the latest build (building, success or failed), `error` when it failed, digest and size of the current version, `suggested_port` (the port a new web app on this image listens on: the first EXPOSE of the Dockerfile, or 80; null for images created before the field), the applications that run from it and the linked GitHub repository.",
+			"Details of a custom image: `status` of the latest build (building, success or failed), `error` when it failed, digest and size of the current version, `suggested_port` (the port a new web app on this image listens on: the first EXPOSE of the Dockerfile, or 80; null for images created before the field), the applications that run from it, `auto_update_apps` (whether a successful build restarts the running apps on the new version) and the linked GitHub repository.",
 		group: "images",
 		route: ["GET", "/v1/images/:image_id"],
 		annotations: R,
@@ -127,7 +127,7 @@ export const imagesTools: ToolDefinition[] = [
 	{
 		name: "update_image",
 		description:
-			"Renames a custom image and/or changes its description (send only what changes). Builds nothing: applications keep running and nothing restarts. `name` is 1 to 50 characters and must be unique among the owner's images (a name already in use gives VALIDATION_ERROR with `details.path` \"name\"). `description` is free text up to 128 characters; `null` or an empty string removes it. At least one of the two is required. System images cannot be changed (ACCESS_DENIED). Returns the updated image.",
+			"Renames a custom image, changes its description and/or turns automatic app updates on or off (send only what changes). Builds nothing: applications keep running and nothing restarts now. `auto_update_apps` (boolean): when true, every successful build of the image (GitHub push, upload or manual rebuild) restarts the image's running apps on the new version; stopped apps stay stopped and an app that fails to update does not block the others (it shows in the activity log); images created from GitHub start with it on, the others off. `name` is 1 to 50 characters and must be unique among the owner's images (a name already in use gives VALIDATION_ERROR with `details.path` \"name\"). `description` is free text up to 128 characters; `null` or an empty string removes it. At least one field is required. System images cannot be changed (ACCESS_DENIED). Returns the updated image.",
 		group: "images",
 		route: ["PATCH", "/v1/images/:image_id"],
 		annotations: WI,
@@ -135,17 +135,18 @@ export const imagesTools: ToolDefinition[] = [
 			id,
 			name: z.string().min(1).max(50).optional().describe("New image name (1 to 50 characters)"),
 			description: z.string().max(128).nullable().optional().describe("New description, up to 128 characters; null or empty removes it"),
+			auto_update_apps: z.boolean().optional().describe("Restart the image's running apps on the new version after every successful build"),
 			workspace_id,
 		},
 		handler: (args, client) =>
 			client
-				.patch(`/v1/images/${enc(args.id)}`, pick(args, ["name", "description"]), { workspace_id: str(args.workspace_id) })
+				.patch(`/v1/images/${enc(args.id)}`, pick(args, ["name", "description", "auto_update_apps"]), { workspace_id: str(args.workspace_id) })
 				.then((r) => respond(r)),
 	},
 	{
 		name: "rebuild_image",
 		description:
-			"Rebuilds an image from a new build context (a project folder or a .zip file on the computer), replacing the whole context. Asynchronous: returns with status \"building\". A rebuild never restarts applications: they move to the new version on their next restart or deploy. A failed build keeps the current version. Refused with IMAGE_BUILD_IN_PROGRESS while another build runs.",
+			"Rebuilds an image from a new build context (a project folder or a .zip file on the computer), replacing the whole context. Asynchronous: returns with status \"building\". A rebuild restarts applications only when the image has `auto_update_apps` on (see `update_image`); otherwise they move to the new version on their next restart or deploy. A failed build keeps the current version. Refused with IMAGE_BUILD_IN_PROGRESS while another build runs.",
 		group: "images",
 		route: ["PUT", "/v1/images/:image_id"],
 		local: true,
