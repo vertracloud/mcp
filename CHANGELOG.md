@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/vertracloud/mcp/compare/v0.3.4...v0.3.5) (2026-11-08)
+
+
+### Features
+
+* **images:** accept auto_update_apps in update_image ([2dd4894](https://github.com/vertracloud/mcp/commit/2dd4894dee80f50ad64c3f836cf624612cf15da8))
+
 ## [0.3.4](https://github.com/vertracloud/mcp/compare/v0.3.3...v0.3.4) (2026-11-03)
 
 
