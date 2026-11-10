@@ -4,7 +4,8 @@ import { respond } from "../result.js";
 import { D, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, pick } from "./util.js";
 
-const resourceType = z.enum([WorkspaceResourceType.Application, WorkspaceResourceType.Database]);
+// Every resource type the API accepts in folders and favorites: applications, databases, custom images and stacks.
+const resourceType = z.enum(Object.values(WorkspaceResourceType) as [string, ...string[]]);
 const folderColor = z.enum(WORKSPACE_FOLDER_COLORS as [string, ...string[]]);
 
 const createFolder = z
@@ -77,11 +78,14 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 		resource_id: resource.shape.resource_id,
 	};
 	const positionedResourceShape = { ...resourceShape, position: resource.shape.position };
+	// Folders have no listing route of their own: they come inside the profile (personal) or the workspace.
+	const listedIn = personal ? "`get_profile` (`resource_organization`)" : "`get_workspace` (`resource_organization`)";
+	const kinds = "an application, database, custom image or stack";
 
 	return [
 		{
 			name: `create_${personal ? "personal" : "workspace"}_folder`,
-			description: `Creates a ${label} folder to organize applications and databases.`,
+			description: `Creates a ${label} folder, the way the dashboard groups resources: it can hold applications, databases, custom images and stacks. The existing folders, with what each one holds, are in ${listedIn}; put a resource in with \`add_${label}_resource_to_folder\`.`,
 			group,
 			route: folderRoute(scope, "POST"),
 			annotations: W,
@@ -117,7 +121,7 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 		},
 		{
 			name: `add_${personal ? "personal" : "workspace"}_resource_to_folder`,
-			description: `Puts an application or database into a ${label} folder.`,
+			description: `Puts ${kinds} into a ${label} folder (\`resource_type\` says which). A resource is in one folder at a time, so this also moves it. Folder IDs are in ${listedIn}.`,
 			group,
 			route: folderItemRoute(scope, "PUT"),
 			annotations: WI,
@@ -132,7 +136,7 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 		},
 		{
 			name: `remove_${personal ? "personal" : "workspace"}_resource_from_folder`,
-			description: `Removes an application or database from a ${label} folder, without deleting the resource.`,
+			description: `Removes ${kinds} from a ${label} folder, without deleting the resource.`,
 			group,
 			route: folderItemRoute(scope, "DELETE"),
 			annotations: WI,
@@ -146,7 +150,7 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 		},
 		{
 			name: `favorite_${personal ? "personal" : "workspace"}_resource`,
-			description: `Adds an application or database to the ${label} favorites.`,
+			description: `Adds ${kinds} to the ${label} favorites.`,
 			group,
 			route: favoriteRoute(scope, "PUT"),
 			annotations: WI,
@@ -158,7 +162,7 @@ function createTools(scope: OrganizationScope): ToolDefinition[] {
 		},
 		{
 			name: `unfavorite_${personal ? "personal" : "workspace"}_resource`,
-			description: `Removes an application or database from the ${label} favorites.`,
+			description: `Removes ${kinds} from the ${label} favorites.`,
 			group,
 			route: favoriteRoute(scope, "DELETE"),
 			annotations: WI,

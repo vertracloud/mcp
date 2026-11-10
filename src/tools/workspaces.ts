@@ -18,7 +18,7 @@ export const workspacesTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_workspace",
-		description: "Details of a workspace.",
+		description: "Details of a workspace, including `resource_organization`: its folders (with the resources in each one) and its favorites, as the dashboard shows them.",
 		group: "workspaces",
 		route: ["GET", "/v1/workspaces/:id"],
 		annotations: R,

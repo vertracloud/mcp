@@ -6,7 +6,8 @@ import { pick } from "./util.js";
 export const accountTools: ToolDefinition[] = [
 	{
 		name: "get_profile",
-		description: "Account profile: plan, allocated memory, limits and usage.",
+		description:
+			"Account profile: plan, allocated memory, limits and usage, the applications and databases of the account, and `resource_organization`: the personal folders (with the resources in each one) and the favorites, as the dashboard shows them.",
 		group: "account",
 		route: ["GET", "/v1/users/me"],
 		annotations: R,
