@@ -146,7 +146,7 @@ export const imagesTools: ToolDefinition[] = [
 	{
 		name: "rebuild_image",
 		description:
-			"Rebuilds an image from a new build context (a project folder or a .zip file on the computer), replacing the whole context. Asynchronous: returns with status \"building\". A rebuild restarts applications only when the image has `auto_update_apps` on (see `update_image`); otherwise they move to the new version on their next restart or deploy. A failed build keeps the current version. Refused with IMAGE_BUILD_IN_PROGRESS while another build runs.",
+			"Rebuilds an image from a new build context (a project folder or a .zip file on the computer), replacing the whole context. To rebuild without new files, use `rebuild_image_from_source`. Asynchronous: returns with status \"building\". A rebuild restarts applications only when the image has `auto_update_apps` on (see `update_image`); otherwise they move to the new version on their next restart or deploy. A failed build keeps the current version. Refused with IMAGE_BUILD_IN_PROGRESS while another build runs.",
 		group: "images",
 		route: ["PUT", "/v1/images/:image_id"],
 		local: true,
@@ -170,6 +170,17 @@ export const imagesTools: ToolDefinition[] = [
 					}),
 				);
 			}),
+	},
+	{
+		name: "rebuild_image_from_source",
+		description:
+			"Builds the image again without uploading anything. A GitHub-linked image uses the tip of the linked branch; any other image uses the build context of its latest build, including a failed one, so this is how to retry a failed build. Asynchronous: returns right away with status \"building\"; call `get_image` until it is \"success\" or \"failed\", and `get_image_build_log` for the log. Counts toward the hourly deploy limit (DEPLOY_RATE_LIMITED). A rebuild restarts applications only when the image has `auto_update_apps` on (see `update_image`). Refused with IMAGE_BUILD_IN_PROGRESS while another build runs, and with IMAGE_NOT_READY when there is no stored context (use `rebuild_image` with new files). Images that belong to a template cannot be rebuilt (IMAGE_TEMPLATE_ONLY).",
+		group: "images",
+		route: ["POST", "/v1/images/:image_id/rebuild"],
+		annotations: W,
+		inputSchema: { id, workspace_id },
+		handler: (args, client) =>
+			client.post(`/v1/images/${enc(args.id)}/rebuild`, undefined, { workspace_id: str(args.workspace_id) }).then((r) => respond(r)),
 	},
 	{
 		name: "delete_image",

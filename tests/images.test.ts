@@ -20,6 +20,7 @@ const IMAGE_TOOLS: Record<string, string> = {
 	create_image: "images:write",
 	update_image: "images:write",
 	rebuild_image: "images:write",
+	rebuild_image_from_source: "images:write",
 	delete_image: "images:delete",
 	list_image_versions: "images:read",
 	get_image_build_log: "images:read",
@@ -42,7 +43,7 @@ afterEach(() => {
 	else process.env.VERTRA_MCP_ROOT = previous;
 });
 
-test("o grupo images tem exatamente as nove tools do plano", () => {
+test("o grupo images tem exatamente as dez tools esperadas", () => {
 	const names = tools.filter((t) => t.group === "images").map((t) => t.name).sort();
 	assert.deepEqual(names, Object.keys(IMAGE_TOOLS).sort());
 });
@@ -58,6 +59,7 @@ test("as rotas de imagem existem no catálogo com o escopo esperado", () => {
 	assert.equal(scopeForRoute("POST", "/v1/images"), "images:write");
 	assert.equal(scopeForRoute("PATCH", "/v1/images/:image_id"), "images:write");
 	assert.equal(scopeForRoute("PUT", "/v1/images/:image_id"), "images:write");
+	assert.equal(scopeForRoute("POST", "/v1/images/:image_id/rebuild"), "images:write");
 	assert.equal(scopeForRoute("DELETE", "/v1/images/:image_id"), "images:delete");
 	assert.equal(scopeForRoute("GET", "/v1/images/:image_id/logs"), "images:read");
 	assert.equal(scopeForRoute("POST", "/v1/apps/image"), "apps:write");
@@ -68,7 +70,7 @@ test("anotações: leitura só nas tools que não mudam nada", () => {
 		assert.equal(tool(name).annotations.readOnlyHint, true, name);
 		assert.equal(tool(name).annotations.destructiveHint, false, name);
 	}
-	for (const name of ["create_image", "update_image", "rebuild_image", "create_app_from_image"]) {
+	for (const name of ["create_image", "update_image", "rebuild_image", "rebuild_image_from_source", "create_app_from_image"]) {
 		assert.equal(tool(name).annotations.readOnlyHint, false, name);
 		assert.equal(tool(name).annotations.destructiveHint, false, name);
 	}
@@ -198,6 +200,40 @@ test("rebuild_image troca o contexto com PUT multipart, sem reiniciar nada", asy
 	assert.equal(calls[0]?.method, "PUT");
 	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/images/img1");
 	assert.ok((calls[0]?.body as FormData).get("file"));
+});
+
+test("rebuild_image_from_source faz POST sem corpo nem arquivo, com workspace_id na query", async () => {
+	const response = { id: "img1", status: "building" };
+	const { fetch, calls } = stubFetch({ status: 202, body: { response } });
+	const result = await tool("rebuild_image_from_source").handler({ id: "img 1", workspace_id: "w1" }, new VertraClient("k", { fetch }));
+
+	assert.equal(calls.length, 1);
+	assert.equal(calls[0]?.method, "POST");
+	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/images/img%201/rebuild?workspace_id=w1");
+	assert.equal(calls[0]?.body, undefined);
+	assert.deepEqual(parseResult(result), response);
+});
+
+test("rebuild_image_from_source sem workspace_id não manda query, e o schema pede só o id", async () => {
+	const { fetch, calls } = stubFetch({ status: 202, body: { response: { id: "img1", status: "building" } } });
+	await tool("rebuild_image_from_source").handler({ id: "img1" }, new VertraClient("k", { fetch }));
+	assert.equal(calls[0]?.url, "https://api.vertracloud.app/v1/images/img1/rebuild");
+
+	const schema = z.object(tool("rebuild_image_from_source").inputSchema as z.ZodRawShape);
+	assert.equal(schema.safeParse({}).success, false);
+	assert.equal(schema.safeParse({ id: "img1" }).success, true);
+});
+
+test("rebuild_image_from_source repassa o erro da API intacto", async () => {
+	const error = { code: "IMAGE_BUILD_IN_PROGRESS", message: "busy" };
+	const { fetch } = stubFetch({ status: 409, body: error });
+	const result = await tool("rebuild_image_from_source").handler({ id: "img1" }, new VertraClient("k", { fetch }));
+	assert.equal(result.isError, true);
+	assert.equal((parseResult(result) as { code: string }).code, "IMAGE_BUILD_IN_PROGRESS");
+});
+
+test("rebuild_image aponta a tool nova quando não há arquivos novos", () => {
+	assert.match(tool("rebuild_image").description, /rebuild_image_from_source/);
 });
 
 test("create_app_from_image manda o corpo JSON de POST /v1/apps/image", async () => {
@@ -476,6 +512,7 @@ function requiredArgs(name: string): Record<string, unknown> {
 		case "rebuild_image":
 			return { id: "img1", path: "api" };
 		case "update_image":
+		case "rebuild_image_from_source":
 		case "get_image":
 		case "list_image_versions":
 		case "get_image_build_log":
