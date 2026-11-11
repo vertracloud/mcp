@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.6](https://github.com/vertracloud/mcp/compare/v0.3.5...v0.3.6) (2026-11-11)
+
+
+### Features
+
+* **folders:** make folders discoverable and accept images and stacks ([ebe5720](https://github.com/vertracloud/mcp/commit/ebe572015fee78cab8f32919877a48922af66f20))
+* **images:** rebuild_image_from_source tool ([98f8324](https://github.com/vertracloud/mcp/commit/98f8324a8a167726c323e2c52cb9464030d1c7ed))
+
 ## [0.3.5](https://github.com/vertracloud/mcp/compare/v0.3.4...v0.3.5) (2026-11-08)
 
 
