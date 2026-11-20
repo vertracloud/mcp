@@ -3,7 +3,9 @@
  * Every path comes from the user/agent; nothing the API returns is used to build a path.
  */
 import AdmZip from "adm-zip";
+import { randomBytes } from "node:crypto";
 import { constants, fstatSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { link, open, rename, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
@@ -210,6 +212,82 @@ export function writeLocalFile(dest: string, bytes: Uint8Array): { path: string;
 		throw err;
 	}
 	return { path: full, bytes: bytes.byteLength };
+}
+
+/** Fails with `PATH_OUTSIDE_ROOT`/`DEST_EXISTS` before any work is done for a download (a snapshot taken for nothing counts against the quota). */
+export function assertDestinationFree(dest: string): void {
+	const full = ensureInsideRoot(dest);
+	try {
+		lstatSync(full);
+	} catch {
+		return;
+	}
+	throw new LocalError("DEST_EXISTS", `${full} already exists; choose another name.`);
+}
+
+/** A file being written as bytes arrive: they go to a temporary file next to the destination, which only gets its final name on `commit()`. */
+export interface LocalDestination {
+	path: string;
+	write(chunk: Uint8Array): Promise<void>;
+	/** Gives the temporary file the final name. Never overwrites: a destination that appeared meanwhile is `DEST_EXISTS`. */
+	commit(): Promise<void>;
+	/** Closes and removes the temporary file. Safe to call at any time, any number of times (after a `commit` it does nothing). */
+	abort(): Promise<void>;
+}
+
+/**
+ * Opens `dest` (inside the allowed root, never an existing file) for a streamed write. Memory is one chunk, whatever the size; failure or
+ * cancellation (`abort()`) leaves nothing behind, and the final name never holds a partial file.
+ */
+export async function openLocalDestination(dest: string): Promise<LocalDestination> {
+	const full = ensureInsideRoot(dest);
+	mkdirSync(dirname(full), { recursive: true });
+	const exists = () => {
+		try {
+			lstatSync(full);
+			return true;
+		} catch {
+			return false;
+		}
+	};
+	const taken = () => new LocalError("DEST_EXISTS", `${full} already exists; choose another name.`);
+	if (exists()) throw taken();
+	const temp = `${full}.${randomBytes(6).toString("hex")}.part`;
+	const handle = await open(temp, "wx", 0o600);
+	let state: "open" | "done" = "open";
+	const finish = async (remove: boolean) => {
+		if (state === "done") return;
+		state = "done";
+		await handle.close().catch(() => undefined);
+		if (remove) await rm(temp, { force: true });
+	};
+	return {
+		path: full,
+		write: async (chunk) => {
+			await handle.write(chunk);
+		},
+		commit: async () => {
+			await handle.close();
+			try {
+				try {
+					await link(temp, full);
+				} catch (err) {
+					if ((err as NodeJS.ErrnoException).code === "EEXIST") throw taken();
+					// A filesystem without hard links: rename, after the same no-overwrite check.
+					if (exists()) throw taken();
+					await rename(temp, full);
+					state = "done";
+					return;
+				}
+				await rm(temp, { force: true });
+				state = "done";
+			} catch (err) {
+				await finish(true);
+				throw err;
+			}
+		},
+		abort: () => finish(true),
+	};
 }
 
 /**
