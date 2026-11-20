@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.7](https://github.com/vertracloud/mcp/compare/v0.3.6...v0.3.7) (2026-11-20)
+
+
+### Features
+
+* **apps,databases:** create from a snapshot and run destructive actions at once ([d6304c1](https://github.com/vertracloud/mcp/commit/d6304c1779235a40f75af9dc9f2f57d735e6c946))
+* **snapshots:** follow snapshot and restore jobs ([fd8d234](https://github.com/vertracloud/mcp/commit/fd8d234d518cab0cb2c16f1acd4aa3aa6ebf3179))
+* stream binary downloads to disk with an inactivity deadline ([9392a46](https://github.com/vertracloud/mcp/commit/9392a46f24ac96a70b78084008f5c756ad7ac0f7))
+
 ## [0.3.6](https://github.com/vertracloud/mcp/compare/v0.3.5...v0.3.6) (2026-11-11)
 
 
