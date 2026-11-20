@@ -1,9 +1,11 @@
 import type { RESTPatchAPIApplicationUpdateConfigBody } from "@vertracloud/api-types/v1";
 import { z } from "zod";
-import { fileName, writeLocalFile, zipDirectory } from "../local.js";
+import { SNAPSHOT_TIMEOUT_MS } from "../client.js";
+import { LocalError, assertDestinationFree, fileName, zipDirectory } from "../local.js";
 import { fail, ok, respond, untrusted } from "../result.js";
 import { D, DI, R, W, WI, type ToolDefinition } from "./defs.js";
-import { enc, guardLocal, pick, str } from "./util.js";
+import { followJob } from "./snapshots.js";
+import { downloadToLocal, enc, guardLocal, pick, str } from "./util.js";
 
 const POLL_MS = 2_000;
 const BUILD_ERROR_HINT =
@@ -33,7 +35,7 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_app_status",
-		description: "Live status (CPU, RAM, uptime) of an application; without `id`, of all of them.",
+		description: "Live status (CPU, RAM, uptime) of an application; without `id`, of all of them. `restore_job_id` is set (otherwise `null`) while a restore of the application is queued or running: tell the user it is restoring and follow the job with `get_snapshot_job` (scope `applications`, `resource_id` = the app's id).",
 		group: "apps",
 		route: ["GET", "/v1/apps/:id/status"],
 		annotations: R,
@@ -149,16 +151,17 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "create_app",
 		description:
-			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first.",
+			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. Instead of `path`, `snapshot_id` creates the application from a snapshot of an application (`memory` and `main` are not needed, and `path` must be left out); the answer is then 202 with `restore_job_id`: the app exists and its files come back in the background, so follow that job with `get_snapshot_job` (scope `applications`, `resource_id` = the new app's id) until it is ready. If the restore fails, an application of code is deleted by the API, while an application on a custom image is kept as it is: tell the user the restore failed. A 400 SNAPSHOT_EXCEEDS_STORAGE (`details.required_bytes`, `details.available_bytes`) means the snapshot does not fit in the chosen memory.",
 		group: "apps",
 		route: ["POST", "/v1/apps"],
 		local: true,
 		annotations: W,
 		inputSchema: {
-			path: z.string().describe("Project folder on the computer"),
+			path: z.string().optional().describe("Project folder on the computer (required unless `snapshot_id` is given)"),
+			snapshot_id: z.string().min(1).optional().describe("Create the application from this snapshot instead of a folder (leave `path` out)"),
 			name: z.string().describe("Application name"),
-			memory: z.number().int().positive().describe("RAM in MB"),
-			main: z.string().describe("Main file (e.g. index.js)"),
+			memory: z.number().int().positive().optional().describe("RAM in MB (required with `path`)"),
+			main: z.string().optional().describe("Main file, e.g. index.js (required with `path`)"),
 			version: z.string().optional().describe('Runtime version; "recommended" by default'),
 			description: z.string().optional(),
 			subdomain: z.string().optional(),
@@ -168,13 +171,25 @@ export const appsTools: ToolDefinition[] = [
 		},
 		handler: (args, client) =>
 			guardLocal(async () => {
-				const zip = zipDirectory(String(args.path));
+				const snapshotId = str(args.snapshot_id);
 				const form = new FormData();
-				form.append("file", new Blob([new Uint8Array(zip)]), `${fileName(String(args.path))}.zip`);
+				if (snapshotId) {
+					if (args.path !== undefined) throw new LocalError("INVALID_ARGUMENTS", "Give `path` or `snapshot_id`, not both.");
+					form.append("snapshot_id", snapshotId);
+					if (args.memory !== undefined) form.append("memory", String(args.memory));
+					if (args.main !== undefined) form.append("main", String(args.main));
+					if (str(args.version)) form.append("version", String(args.version));
+				} else {
+					if (args.path === undefined || args.memory === undefined || args.main === undefined) {
+						throw new LocalError("INVALID_ARGUMENTS", "`path`, `memory` and `main` are required unless `snapshot_id` is given.");
+					}
+					const zip = zipDirectory(String(args.path));
+					form.append("file", new Blob([new Uint8Array(zip)]), `${fileName(String(args.path))}.zip`);
+					form.append("memory", String(args.memory));
+					form.append("main", String(args.main));
+					form.append("version", str(args.version) ?? "recommended");
+				}
 				form.append("name", String(args.name));
-				form.append("memory", String(args.memory));
-				form.append("main", String(args.main));
-				form.append("version", str(args.version) ?? "recommended");
 				for (const field of ["description", "subdomain", "start", "build", "workspace_id"] as const) {
 					const value = str(args[field]);
 					if (value) form.append(field, value);
@@ -259,22 +274,53 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "download_app",
-		description: "Downloads the application's files as a zip and writes it to the given path.",
+		description:
+			"Downloads the application's files as a zip and writes it to the given path. It takes a manual snapshot of the application (it counts against the snapshot quota and shows up in `list_snapshots`) and downloads that snapshot, so the key needs the `snapshots:write` and `snapshots:read` scopes. Taking the snapshot can outlast one call: `wait_seconds` (default and maximum 25) waits for it; if it is still running the answer is `{ status: \"accepted\", job_id, message }` (NOT an error): follow `job_id` with `get_snapshot_job` (scope `applications`, `resource_id` = this application) until it is ready, then call `download_snapshot` with its `snapshot_id`. A job that ends failed is returned as an error with the job's `reason`. Past the snapshot limit the answer is 429 SNAPSHOT_RATE_LIMITED (`details.scope`, `details.retry_after`, `details.resets_at` for the account quota); an account without a plan gets 403 PLAN_NOT_ALLOWED but can still list and download the snapshots it already has. A single file is read with `read_file`.",
 		group: "apps",
-		route: ["GET", "/v1/apps/:id/download"],
+		scope: "snapshots:write",
 		local: true,
-		annotations: R,
-		inputSchema: { id, dest: z.string().describe("Path of the .zip file to write"), workspace_id },
+		annotations: W,
+		inputSchema: {
+			id,
+			dest: z.string().describe("Path of the .zip file to write"),
+			wait_seconds: z.number().int().min(1).max(25).optional().describe("How long to wait for the snapshot to be taken, in seconds (default and max 25)"),
+			workspace_id,
+		},
 		handler: (args, client) =>
 			guardLocal(async () => {
-				const res = await client.download(`/v1/apps/${enc(args.id)}/download`, { workspace_id: str(args.workspace_id) });
-				if (!res.ok) return fail(res.body);
-				return ok(writeLocalFile(String(args.dest), res.body as Uint8Array));
+				assertDestinationFree(String(args.dest));
+				const workspaceId = str(args.workspace_id);
+				const created = await client.post(`/v1/users/${enc(args.id)}/snapshots`, undefined, { scope: "applications", workspace_id: workspaceId }, undefined, SNAPSHOT_TIMEOUT_MS);
+				if (!created.ok) return fail(created.body);
+				let snapshotId: string | undefined;
+				if (created.status === 202) {
+					const jobId = (created.body as { job_id?: unknown } | undefined)?.job_id;
+					if (typeof jobId !== "string") return fail({ code: "SNAPSHOT_FAILED", message: "The snapshot is still being taken but no job_id came back." });
+					const followed = await followJob(client, String(args.id), jobId, "applications", Number(args.wait_seconds ?? 25), workspaceId);
+					if (!followed.ok) return fail(followed.body);
+					const { job } = followed;
+					if (job.status === "failed" || job.status === "skipped") {
+						return fail({ code: job.reason ?? "SNAPSHOT_FAILED", message: `The snapshot job ended ${job.status}.`, ...(job.details ? { details: job.details } : {}) });
+					}
+					if (job.status !== "ready" || typeof job.snapshot_id !== "string") {
+						return ok({
+							status: "accepted",
+							job_id: jobId,
+							message: "The snapshot is still being taken (not an error). Follow job_id with get_snapshot_job (scope applications, resource_id = this application); when it is ready, call download_snapshot with its snapshot_id.",
+						});
+					}
+					snapshotId = job.snapshot_id;
+				} else {
+					snapshotId = (created.body as { id?: string } | undefined)?.id;
+				}
+				if (typeof snapshotId !== "string") return fail({ code: "SNAPSHOT_FAILED", message: "The snapshot was taken but no snapshot id came back." });
+				return downloadToLocal(client, `/v1/users/${enc(args.id)}/snapshots/${enc(snapshotId)}/download`, { scope: "applications", workspace_id: workspaceId }, String(args.dest));
 			}),
 	},
 	{
 		name: "delete_app",
-		description: "Permanently deletes the application, along with its files and configuration.",
+		description:
+			"Permanently deletes the application, along with its files and configuration. It runs right away and cannot be undone: to keep a copy, call `create_snapshot` first.",
 		group: "apps",
 		route: ["DELETE", "/v1/apps/:id"],
 		annotations: D,

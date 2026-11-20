@@ -73,7 +73,7 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_database_status",
-		description: "Live status (CPU, RAM, disk, uptime) of a database; without `id`, of all of them.",
+		description: "Live status (CPU, RAM, disk, uptime) of a database; without `id`, of all of them. `restore_job_id` is set (otherwise `null`) while a restore of the database is queued or running: tell the user it is restoring and follow the job with `get_snapshot_job` (scope `databases`, `resource_id` = the database's id).",
 		group: "databases",
 		route: ["GET", "/v1/databases/:id/status"],
 		annotations: R,
@@ -99,7 +99,7 @@ export const databasesTools: ToolDefinition[] = [
 	{
 		name: "create_database",
 		description:
-			"Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. `version` is the engine's version line (e.g. \"18\", \"8.4\"); omit it to get the recommended one — call `list_database_versions` to see the valid lines. Wrong lines fail with INVALID_DATABASE_VERSION. The version of an existing database cannot be changed afterwards.",
+			"Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. `version` is the engine's version line (e.g. \"18\", \"8.4\"); omit it to get the recommended one — call `list_database_versions` to see the valid lines. Wrong lines fail with INVALID_DATABASE_VERSION. The version of an existing database cannot be changed afterwards. With `snapshot_id` the database is created from a snapshot of a database of the same engine: the answer is 202 with `restore_job_id`; the database exists and accepts connections at once, and the data comes back in the background, so follow that job with `get_snapshot_job` (scope `databases`, `resource_id` = the new database's id) until it is ready. If the restore FAILS the database is NOT deleted: it stays, empty or with whatever was written meanwhile, so tell the user the restore failed and the database was created empty. 400 SNAPSHOT_EXCEEDS_STORAGE (`details.required_bytes`, `details.available_bytes`, `details.required_ram_mb`) means the snapshot does not fit in that RAM: retry with at least `required_ram_mb`; SNAPSHOT_VERSION_NEWER means `version` is older than the snapshot's.",
 		group: "databases",
 		route: ["POST", "/v1/databases"],
 		annotations: W,
@@ -112,6 +112,7 @@ export const databasesTools: ToolDefinition[] = [
 				.min(1)
 				.optional()
 				.describe("Engine version line, e.g. \"18\" or \"8.4\" (never a patch). Omitted = the recommended one. Valid lines per engine: `list_database_versions`."),
+			snapshot_id: z.string().min(1).optional().describe("Create the database from this snapshot of a database (same engine)"),
 			description: z.string().optional(),
 			workspace_id: z.string().optional(),
 		},
@@ -121,7 +122,7 @@ export const databasesTools: ToolDefinition[] = [
 					type: ENGINES[args.engine as EngineName],
 					name: String(args.name),
 					ram: Number(args.ram),
-					...pick(args, ["version", "description", "workspace_id"]),
+					...pick(args, ["version", "description", "workspace_id", "snapshot_id"]),
 				})
 				.then((r) => respond(r)),
 	},
@@ -159,7 +160,8 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "reset_database",
-		description: "DELETES ALL DATA in the database and leaves it empty. There is no way to undo this without a snapshot.",
+		description:
+			"DELETES ALL DATA in the database and leaves it empty. It runs right away and cannot be undone: to keep a copy, call `create_snapshot` first.",
 		group: "databases",
 		route: ["POST", "/v1/databases/:id/reset"],
 		annotations: D,
@@ -169,7 +171,8 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "delete_database",
-		description: "Permanently deletes the database, along with the data inside it.",
+		description:
+			"Permanently deletes the database, along with the data inside it. It runs right away and cannot be undone: to keep a copy, call `create_snapshot` first.",
 		group: "databases",
 		route: ["DELETE", "/v1/databases/:id"],
 		annotations: D,
