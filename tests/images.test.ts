@@ -471,15 +471,15 @@ test("create_image recusa duas origens, nenhuma, branch sem repositório ou nome
 });
 
 test("restore_snapshot envia restore_image_version e devolve o warning do servidor", async () => {
-	const warning = { message: "Snapshot restored.", warning: "IMAGE_VERSION_NOT_FOUND" };
-	const { fetch, calls } = stubFetch({ body: { response: warning } });
+	const warning = { job_id: "j1", warning: "IMAGE_VERSION_NOT_FOUND" };
+	const { fetch, calls } = stubFetch({ status: 202, body: { response: warning } });
 	const result = await tool("restore_snapshot").handler(
 		{ scope: "applications", resource_id: "app1", snapshot_id: "s1", restore_image_version: true },
 		new VertraClient("k", { fetch }),
 	);
 
 	assert.deepEqual(JSON.parse(String(calls[0]?.body)), { restore_image_version: true });
-	assert.deepEqual(parseResult(result), warning);
+	assert.deepEqual(parseResult(result), { ...warning, message: (parseResult(result) as { message: string }).message });
 	assert.match(tool("restore_snapshot").description, /warning/);
 });
 
