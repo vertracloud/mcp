@@ -7,7 +7,8 @@ import { tools } from "../src/tools/index.js";
 
 let server: Server | undefined;
 afterEach(async () => {
-	server?.closeAllConnections();
+	if (!server) return;
+	server.closeAllConnections();
 	await new Promise((resolve) => server?.close(resolve));
 	server = undefined;
 });
@@ -106,6 +107,52 @@ test("o signal do chamador continua cancelando o download", async () => {
 	});
 	assert.equal(res.ok, false);
 	assert.equal((res.body as { code: string }).code, "ABORTED");
+});
+
+function deafBodyFetch(): typeof fetch {
+	return (async () => {
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new Uint8Array(10));
+			},
+			pull: () => new Promise(() => undefined),
+		});
+		return new Response(body, { status: 200, headers: { "content-type": "application/zip" } });
+	}) as unknown as typeof fetch;
+}
+
+const settleWithin = <T>(promise: Promise<T>, ms: number) =>
+	Promise.race([promise, new Promise<"HUNG">((resolve) => setTimeout(() => resolve("HUNG"), ms))]);
+
+test("o signal do chamador encerra a leitura mesmo quando o corpo não reage ao abort", async () => {
+	const controller = new AbortController();
+	setTimeout(() => controller.abort(), 100);
+	const res = await settleWithin(
+		new VertraClient("k", { fetch: deafBodyFetch(), downloadInactivityMs: 5_000 }).request({
+			method: "GET",
+			path: "/v1/users/a1/snapshots/s1/download",
+			binary: true,
+			signal: controller.signal,
+		}),
+		1_500,
+	);
+	assert.ok(res !== "HUNG", "a leitura ficou pendurada");
+	assert.equal(res.ok, false);
+	assert.equal((res.body as { code: string }).code, "ABORTED");
+});
+
+test("a inatividade encerra a leitura mesmo quando o corpo não reage ao abort", async () => {
+	const res = await settleWithin(
+		new VertraClient("k", { fetch: deafBodyFetch(), downloadInactivityMs: 150 }).request({
+			method: "GET",
+			path: "/v1/users/a1/snapshots/s1/download",
+			binary: true,
+		}),
+		1_500,
+	);
+	assert.ok(res !== "HUNG", "a leitura ficou pendurada");
+	assert.equal(res.ok, false);
+	assert.equal((res.body as { code: string }).code, "TIMEOUT");
 });
 
 test("429 RESTORE_COOLDOWN traz retry_after de details", async () => {

@@ -149,7 +149,7 @@ export class VertraClient {
 					let written = 0;
 					let sinkFailure: { error: unknown } | undefined;
 					try {
-						await readBody(res, arm, disarm, async (chunk) => {
+						await readBody(res, controller.signal, arm, disarm, async (chunk) => {
 							try {
 								await sink.write(chunk);
 							} catch (error) {
@@ -166,7 +166,7 @@ export class VertraClient {
 				}
 				try {
 					const chunks: Uint8Array[] = [];
-					await readBody(res, arm, disarm, async (chunk) => void chunks.push(chunk));
+					await readBody(res, controller.signal, arm, disarm, async (chunk) => void chunks.push(chunk));
 					return { ok: true, status: res.status, body: concat(chunks) as unknown as T };
 				} catch (err) {
 					return networkError(err, input.signal);
@@ -232,11 +232,30 @@ function networkError(err: unknown, callerSignal: AbortSignal | undefined): ApiR
 	return { ok: false, status: 0, body: { code, message: err instanceof Error ? err.message : String(err) } };
 }
 
+/** A body stream can miss the abort and leave `read()` pending forever, so every read also settles when `signal` aborts (a per-read listener: racing a long-lived promise would retain every chunk). */
+function readUnlessAborted(reader: ReadableStreamDefaultReader<Uint8Array>, signal: AbortSignal): Promise<ReadableStreamReadResult<Uint8Array>> {
+	return new Promise((resolve, reject) => {
+		const fail = () => reject(signal.reason ?? new DOMException("The operation was aborted.", "AbortError"));
+		if (signal.aborted) return fail();
+		signal.addEventListener("abort", fail, { once: true });
+		reader.read().then(
+			(result) => {
+				signal.removeEventListener("abort", fail);
+				resolve(result);
+			},
+			(error) => {
+				signal.removeEventListener("abort", fail);
+				reject(error);
+			},
+		);
+	});
+}
+
 /**
  * Reads the body chunk by chunk, handing each to `onChunk`. `arm()` starts the inactivity timer before every read and `disarm()` stops it once
- * the chunk is in, so a slow consumer (the disk) is not counted as a stalled download.
+ * the chunk is in, so a slow consumer (the disk) is not counted as a stalled download. The cancel of the reader is not awaited: after a missed abort it could hang too.
  */
-async function readBody(res: Response, arm: () => void, disarm: () => void, onChunk: (chunk: Uint8Array) => Promise<void>): Promise<void> {
+async function readBody(res: Response, signal: AbortSignal, arm: () => void, disarm: () => void, onChunk: (chunk: Uint8Array) => Promise<void>): Promise<void> {
 	const reader = res.body?.getReader();
 	if (!reader) {
 		await onChunk(new Uint8Array(await res.arrayBuffer()));
@@ -245,13 +264,13 @@ async function readBody(res: Response, arm: () => void, disarm: () => void, onCh
 	try {
 		for (;;) {
 			arm();
-			const { done, value } = await reader.read();
+			const { done, value } = await readUnlessAborted(reader, signal);
 			disarm();
 			if (done) return;
 			await onChunk(value);
 		}
 	} catch (error) {
-		await reader.cancel(error).catch(() => undefined);
+		void reader.cancel(error).catch(() => undefined);
 		throw error;
 	}
 }
