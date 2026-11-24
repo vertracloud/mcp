@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.8](https://github.com/vertracloud/mcp/compare/v0.3.7...v0.3.8) (2026-11-24)
+
+
+### Features
+
+* auto restart, one-time database passwords and metric events ([e7e6967](https://github.com/vertracloud/mcp/commit/e7e6967fdb5d738da053ceebcc14aa9059a3f560))
+
+
+### Bug Fixes
+
+* **download:** end a stalled download when it is cancelled ([24d6af2](https://github.com/vertracloud/mcp/commit/24d6af21604ce22db38b797cb43b83c6d2dbef45))
+
 ## [0.3.7](https://github.com/vertracloud/mcp/compare/v0.3.6...v0.3.7) (2026-11-20)
 
 

@@ -29,7 +29,7 @@ export function createServer(apiKey: string, opts: CreateServerOptions = {}): Mc
 	setLocalMode(opts.local === true);
 	const client = new VertraClient(apiKey, opts);
 	const server = new McpServer(
-		{ name: "vertracloud", version: "0.3.7" }, // x-release-please-version
+		{ name: "vertracloud", version: "0.3.8" }, // x-release-please-version
 		{ instructions: SERVER_INSTRUCTIONS },
 	);
 
