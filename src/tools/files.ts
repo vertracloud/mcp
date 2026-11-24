@@ -115,7 +115,8 @@ export const filesTools: ToolDefinition[] = [
 	},
 	{
 		name: "delete_file",
-		description: "Deletes a file or folder from the application.",
+		description:
+			"Deletes a file or folder from the application. The answer has `space_released`: `now` means the space is free already; `on_restart` means the running application still holds the file open, so the space only comes back when the application restarts: tell the user.",
 		group: "files",
 		route: ["DELETE", "/v1/apps/:id/files"],
 		annotations: D,

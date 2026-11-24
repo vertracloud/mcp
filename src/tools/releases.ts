@@ -1,6 +1,6 @@
 import type { RESTPostAPIApplicationRollbackBody } from "@vertracloud/api-types/v1";
 import { z } from "zod";
-import { respond, untrusted } from "../result.js";
+import { respond, untrusted, untrustedLog } from "../result.js";
 import { D, R, type ToolDefinition } from "./defs.js";
 import { enc, str } from "./util.js";
 
@@ -42,7 +42,7 @@ export const releasesTools: ToolDefinition[] = [
 		handler: (args, client) =>
 			client
 				.get(`/v1/apps/${enc(args.id)}/releases/${enc(args.release_id)}/log`, { workspace_id: str(args.workspace_id) })
-				.then((r) => respond(r, untrusted)),
+				.then((r) => respond(r, untrustedLog)),
 	},
 	{
 		name: "preview_rollback",

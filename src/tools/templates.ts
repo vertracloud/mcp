@@ -96,7 +96,7 @@ export const templatesTools: ToolDefinition[] = [
 	{
 		name: "deploy_template",
 		description:
-			"Deploys a template: creates the app (or the stack with its apps, databases and Blob folder) as one operation; if a step fails, everything it created is removed. Answer the template's `inputs` (see `get_template`), optionally set the name, RAM and subdomain per service (`services`, keyed by service id), the destination workspace/folder and the network mode. Only one deploy per account runs at a time. By default it follows the job until it finishes (up to `wait_seconds`) and returns it; if it is still running, the result carries the job id: keep reading it with `get_template_deploy`. Outputs marked `once` (generated passwords, keys) are shown only once: the read that sees the job succeed returns them and later reads return `null`, so show them to the user right away and never store or repeat them elsewhere. Needs a plan that allows the template (see `account` in `get_template`).",
+			"Deploys a template: creates the app (or the stack with its apps, databases and Blob folder) as one operation; if a step fails, everything it created is removed. Answer the template's `inputs` (see `get_template`), optionally set the name, RAM and subdomain per service (`services`, keyed by service id), the destination workspace/folder and the network mode. Only one deploy per account runs at a time. By default it follows the job until it finishes (up to `wait_seconds`) and returns it; if it is still running, the result carries the job id: keep reading it with `get_template_deploy`. Outputs marked `once` (generated passwords, keys) and `database_passwords` (the password of each database the deploy created: `database_id`, `service_id`, `password`) are shown only once: the read that sees the job succeed returns them and later reads return `null` or an empty list, so show them to the user right away and never store or repeat them elsewhere. Needs a plan that allows the template (see `account` in `get_template`).",
 		group: "templates",
 		route: ["POST", "/v1/templates/:template_id/deploy"],
 		annotations: W,
@@ -156,7 +156,7 @@ export const templatesTools: ToolDefinition[] = [
 	{
 		name: "get_template_deploy",
 		description:
-			"The state of a template deploy (or update) job: status, current step, error, what it created (`application_id`/`stack_id`) and its outputs. Outputs marked `once` (generated passwords, keys) come back only on the first read of a finished job and are `null` afterwards: show them to the user right away. This read can consume them, so it is not marked read-only.",
+			"The state of a template deploy (or update) job: status, current step, error, what it created (`application_id`/`stack_id`) and its outputs. Outputs marked `once` (generated passwords, keys) and `database_passwords` (the password of each database the deploy created: `database_id`, `service_id`, `password`) come back only on the first read of a finished job and are `null` or an empty list afterwards: show them to the user right away and never store or repeat them elsewhere. This read can consume them, so it is not marked read-only.",
 		group: "templates",
 		route: ["GET", "/v1/template-deploys/:deploy_id"],
 		annotations: W,

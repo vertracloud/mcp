@@ -152,3 +152,14 @@ test("create_app, get_app e wait_for_app orientam sobre last_build_error", () =>
 		assert.ok(d.includes("last_build_error") && d.includes("INSTALL_OUT_OF_MEMORY"), name);
 	}
 });
+
+test("get_metrics e get_database_metrics descrevem events e devolvem o corpo sem perdê-los", async () => {
+	for (const name of ["get_metrics", "get_database_metrics"]) {
+		const d = tool(name).description;
+		assert.ok(d.includes("events") && d.includes("out_of_memory") && d.includes("auto_restart"), name);
+		const events = [{ at: "2026-11-24T10:00:00.000Z", kind: "crash", out_of_memory: true }];
+		const { fetch } = stubFetch([{ body: { response: { points: [{ at: 1, events }] } } }]);
+		const result = await tool(name).handler({ id: "7" }, new VertraClient("k", { fetch }));
+		assert.deepEqual((parseResult(result) as { points: { events: unknown }[] }).points[0]?.events, events);
+	}
+});

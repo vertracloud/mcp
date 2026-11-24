@@ -73,7 +73,7 @@ test("string de conexão por engine, e null sem credencial", () => {
 test("get_connection_info junta banco e certificado sem inventar credencial", async () => {
 	const { fetch } = stubFetch([
 		{ body: { response: { id: "7", type: 1, host: "db.example", port: 5432 } } },
-		{ body: "-----BEGIN CERTIFICATE-----" },
+		{ body: { response: { ca: "-----BEGIN CERTIFICATE-----" } } },
 	]);
 
 	const result = await tool("get_connection_info").handler({ id: "7" }, new VertraClient("k", { fetch }));
@@ -95,14 +95,14 @@ test("string de conexão do usuário vertracloud, por engine", () => {
 });
 
 test("get_connection_info usa o username da API e monta o banco vertracloud; legado fica como está", async () => {
-	const novo = stubFetch([{ body: { response: { id: "7", type: 2, host: "db.example", port: 27017, username: "vertracloud" } } }, { body: "pem" }]);
+	const novo = stubFetch([{ body: { response: { id: "7", type: 2, host: "db.example", port: 27017, username: "vertracloud" } } }, { body: { response: { ca: "pem" } } }]);
 	const info = parseResult(await tool("get_connection_info").handler({ id: "7" }, new VertraClient("k", { fetch: novo.fetch }))) as Record<string, unknown>;
 	assert.equal(info.user, "vertracloud");
 	assert.equal(info.database, "vertracloud");
 	assert.equal(info.connection_string, null);
 	assert.equal(info.connection_string_template, "mongodb://vertracloud:<password>@db.example:27017/vertracloud?authSource=admin&tls=true");
 
-	const legado = stubFetch([{ body: { response: { id: "8", type: 1, host: "db.example", port: 5432, username: "postgres" } } }, { body: "pem" }]);
+	const legado = stubFetch([{ body: { response: { id: "8", type: 1, host: "db.example", port: 5432, username: "postgres" } } }, { body: { response: { ca: "pem" } } }]);
 	const old = parseResult(await tool("get_connection_info").handler({ id: "8" }, new VertraClient("k", { fetch: legado.fetch }))) as Record<string, unknown>;
 	assert.equal(old.user, "postgres");
 	assert.equal(old.database, null);

@@ -2,7 +2,7 @@ import { statSync } from "node:fs";
 import { z } from "zod";
 import type { ApiErrorBody } from "../client.js";
 import { LocalError, MAX_ZIP_BYTES, ensureInsideRoot, fileName, readLocalFile, zipDirectory } from "../local.js";
-import { fail, ok, respond, untrusted } from "../result.js";
+import { fail, ok, respond, stripTerminalCodes, untrusted, untrustedLog } from "../result.js";
 import { D, R, W, WI, type ToolDefinition } from "./defs.js";
 import { enc, guardLocal, pick, str } from "./util.js";
 
@@ -241,17 +241,17 @@ export const imagesTools: ToolDefinition[] = [
 			if (typeof body !== "string") {
 				// An empty stream comes back as an empty object: there is no log yet.
 				const empty = body !== null && typeof body === "object" && Object.keys(body).length === 0;
-				return ok(untrusted(empty ? "" : body));
+				return ok(untrustedLog(empty ? "" : body));
 			}
-			const lines = sseLogLines(body);
+			const lines = stripTerminalCodes(sseLogLines(body));
 			const tail = args.tail as number | undefined;
-			return ok(untrusted(tail ? lines.split("\n").slice(-tail).join("\n") : lines));
+			return ok(untrustedLog(tail ? lines.split("\n").slice(-tail).join("\n") : lines));
 		},
 	},
 	{
 		name: "create_app_from_image",
 		description:
-			"Creates an application that runs from a custom image. The image must be ready (status \"success\"), otherwise IMAGE_NOT_READY. Asynchronous: returns with status \"building\"; call `wait_for_app` or `get_app` until it is \"up\" or \"down\". `web: true` publishes the app (`subdomain` and `port` apply; the platform injects the port as PORT); `web: false` is an app without traffic, such as a worker or a bot. Without `port`, a web app uses the image's `suggested_port` (the first EXPOSE of its Dockerfile, or 80; see `get_image`). Accounts without a plan get PLAN_REQUIRED.",
+			"Creates an application that runs from a custom image. The image must be ready (status \"success\"), otherwise IMAGE_NOT_READY. Asynchronous: returns with status \"building\"; call `wait_for_app` or `get_app` until it is \"up\" or \"down\". `web: true` publishes the app (`subdomain` and `port` apply; the platform injects the port as PORT); `web: false` is an app without traffic, such as a worker or a bot. Without `port`, a web app uses the image's `suggested_port` (the first EXPOSE of its Dockerfile, or 80; see `get_image`). Accounts without a plan get PLAN_REQUIRED. `auto_restart` (default on) keeps the app restarting by itself after a crash; set false to leave a crashed app stopped.",
 		group: "images",
 		route: ["POST", "/v1/apps/image"],
 		annotations: W,
@@ -273,10 +273,11 @@ export const imagesTools: ToolDefinition[] = [
 				)
 				.optional()
 				.describe("Environment variables of the application"),
+			auto_restart: z.boolean().optional().describe("Restart the app by itself when it crashes (default: on)"),
 			workspace_id,
 		},
 		handler: async (args, client) => {
-			const body = pick(args, ["image_id", "name", "memory", "description", "web", "subdomain", "port", "envs", "workspace_id"]);
+			const body = pick(args, ["image_id", "name", "memory", "description", "web", "subdomain", "port", "envs", "auto_restart", "workspace_id"]);
 			if (args.web === true && args.port === undefined) {
 				// Without a port, a web app listens on the image's suggested port. If the image cannot be read
 				// (for example, the key lacks the images scope), the server's own default applies.

@@ -1,4 +1,4 @@
-import { DatabaseType } from "@vertracloud/api-types/payloads/v1";
+import { DatabaseType, type APIDatabaseCertificate } from "@vertracloud/api-types/payloads/v1";
 import { z } from "zod";
 import { fail, ok, respond } from "../result.js";
 import { D, DI, R, W, WI, type ToolDefinition } from "./defs.js";
@@ -63,7 +63,7 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_database",
-		description: "Details of a database: engine, version line (e.g. \"18\"), name, memory, address and port. The version of an existing database cannot be changed.",
+		description: "Details of a database: engine, version line (e.g. \"18\"), name, memory, address and port. The version of an existing database cannot be changed. `legacy_host: true` means the database still has its original address: moving it to the current address (resetting its certificates) is done only from the dashboard, so tell the user to do it there; `reset_certificate` answers 403 `WEBSITE_ONLY` for it.",
 		group: "databases",
 		route: ["GET", "/v1/databases/:id"],
 		annotations: R,
@@ -86,7 +86,7 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "get_database_metrics",
-		description: "History of CPU, RAM, storage and network usage of the database.",
+		description: "History of CPU, RAM, storage and network usage of the database. `events` lists the restarts, automatic restarts and crashes in the period, each with the exact moment (`at`), the `kind` (restart, auto_restart or crash) and `out_of_memory` (true when it ran out of memory).",
 		group: "databases",
 		route: ["GET", "/v1/databases/:id/metrics"],
 		annotations: R,
@@ -99,7 +99,7 @@ export const databasesTools: ToolDefinition[] = [
 	{
 		name: "create_database",
 		description:
-			"Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. `version` is the engine's version line (e.g. \"18\", \"8.4\"); omit it to get the recommended one — call `list_database_versions` to see the valid lines. Wrong lines fail with INVALID_DATABASE_VERSION. The version of an existing database cannot be changed afterwards. With `snapshot_id` the database is created from a snapshot of a database of the same engine: the answer is 202 with `restore_job_id`; the database exists and accepts connections at once, and the data comes back in the background, so follow that job with `get_snapshot_job` (scope `databases`, `resource_id` = the new database's id) until it is ready. If the restore FAILS the database is NOT deleted: it stays, empty or with whatever was written meanwhile, so tell the user the restore failed and the database was created empty. 400 SNAPSHOT_EXCEEDS_STORAGE (`details.required_bytes`, `details.available_bytes`, `details.required_ram_mb`) means the snapshot does not fit in that RAM: retry with at least `required_ram_mb`; SNAPSHOT_VERSION_NEWER means `version` is older than the snapshot's.",
+			"Creates a managed database. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. `version` is the engine's version line (e.g. \"18\", \"8.4\"); omit it to get the recommended one — call `list_database_versions` to see the valid lines. Wrong lines fail with INVALID_DATABASE_VERSION. The version of an existing database cannot be changed afterwards. With `snapshot_id` the database is created from a snapshot of a database of the same engine: the answer is 202 with `restore_job_id`; the database exists and accepts connections at once, and the data comes back in the background, so follow that job with `get_snapshot_job` (scope `databases`, `resource_id` = the new database's id) until it is ready. If the restore FAILS the database is NOT deleted: it stays, empty or with whatever was written meanwhile, so tell the user the restore failed and the database was created empty. 400 SNAPSHOT_EXCEEDS_STORAGE (`details.required_bytes`, `details.available_bytes`, `details.required_ram_mb`) means the snapshot does not fit in that RAM: retry with at least `required_ram_mb`; SNAPSHOT_VERSION_NEWER means `version` is older than the snapshot's. The answer carries the database's `password` only now: show it to the user right away, say it will not be shown again, and do not store it or repeat it anywhere else. If it is lost, the only way to get another one is `reset_credentials`.",
 		group: "databases",
 		route: ["POST", "/v1/databases"],
 		annotations: W,
@@ -196,7 +196,7 @@ export const databasesTools: ToolDefinition[] = [
 			const query = { workspace_id: str(args.workspace_id) };
 			const [db, cert] = await Promise.all([
 				client.get<Record<string, unknown>>(`/v1/databases/${enc(args.id)}`, query),
-				client.download(`/v1/databases/${enc(args.id)}/credentials/certificate`, query),
+				client.get<APIDatabaseCertificate>(`/v1/databases/${enc(args.id)}/credentials/certificate`, query),
 			]);
 			if (!db.ok) return fail(db.body);
 
@@ -225,6 +225,7 @@ export const databasesTools: ToolDefinition[] = [
 					else howToConnectError = conn.body;
 				}
 			}
+			const ca = cert.ok ? (cert.body as APIDatabaseCertificate).ca : undefined;
 			return ok({
 				id: body.id,
 				engine,
@@ -234,7 +235,7 @@ export const databasesTools: ToolDefinition[] = [
 				user: parts.user ?? null,
 				password: parts.password ?? null,
 				database: parts.database ?? null,
-				ca_pem: cert.ok ? Buffer.from(cert.body as Uint8Array).toString("utf8") : null,
+				ca_pem: typeof ca === "string" ? ca : null,
 				ca_error: cert.ok ? undefined : cert.body,
 				connection_string: connectionString(engine, parts),
 				// Same URL with a placeholder instead of the password, when only the password is missing.
@@ -263,7 +264,7 @@ export const databasesTools: ToolDefinition[] = [
 	},
 	{
 		name: "reset_certificate",
-		description: "Issues a new certificate for the database. Anyone using the old certificate stops being able to connect.",
+		description: "Issues a new certificate for the database. Anyone using the old certificate stops being able to connect. If `get_database` shows `legacy_host: true`, do not call it: moving that database to the current address (it changes the connection URL) is done only from the dashboard, so tell the user to do it there; the call answers 403 `WEBSITE_ONLY`. Otherwise the answer carries `host`, the connection address (unchanged), `client_variables_with_old_host` (empty, as the address does not change) and `apps_to_restart`, the applications that must restart to read the new certificate.",
 		group: "databases",
 		route: ["POST", "/v1/databases/:id/credentials/certificate/reset"],
 		annotations: D,

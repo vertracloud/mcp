@@ -2,14 +2,14 @@ import type { RESTPatchAPIApplicationUpdateConfigBody } from "@vertracloud/api-t
 import { z } from "zod";
 import { SNAPSHOT_TIMEOUT_MS } from "../client.js";
 import { LocalError, assertDestinationFree, fileName, zipDirectory } from "../local.js";
-import { fail, ok, respond, untrusted } from "../result.js";
+import { fail, ok, respond, stripTerminalCodes, untrustedLog } from "../result.js";
 import { D, DI, R, W, WI, type ToolDefinition } from "./defs.js";
 import { followJob } from "./snapshots.js";
 import { downloadToLocal, enc, guardLocal, pick, str } from "./util.js";
 
 const POLL_MS = 2_000;
 const BUILD_ERROR_HINT =
-	"What to do by `last_build_error`: INSTALL_OUT_OF_MEMORY, raise the app memory; BUILD_FAILED or INSTALL_FAILED, read `get_logs` and fix the project; BUILD_TIMEOUT or INSTALL_TIMEOUT, make the build or install shorter; BUILD_INTERRUPTED, try again; INSTALL_SHIELD_BLOCKED, the network protection blocked traffic during the build.";
+	"What to do by `last_build_error`: INSTALL_OUT_OF_MEMORY, raise the app memory; BUILD_FAILED or INSTALL_FAILED, read `get_logs` and fix the project; BUILD_TIMEOUT or INSTALL_TIMEOUT, make the build or install shorter; BUILD_INTERRUPTED, try again; INSTALL_SHIELD_BLOCKED, the network protection blocked traffic during the build; IMAGE_VOLUME_REFUSED or IMAGE_LABEL_REFUSED, adjust the Dockerfile of the app's Docker image and publish a new version; IMAGE_PULL_FAILED, try again or publish a new version of the image.";
 const id = z.string().min(1).describe("Application ID");
 const workspace_id = z.string().optional().describe("ID of the workspace that owns the resource, if any");
 
@@ -80,14 +80,14 @@ export const appsTools: ToolDefinition[] = [
 			const tail = args.tail as number | undefined;
 			return respond(res, (body) => {
 				const logs = typeof body === "string" ? body : (body as { logs?: string })?.logs;
-				if (typeof logs !== "string" || !tail) return untrusted(body);
-				return untrusted(logs.split("\n").slice(-tail).join("\n"));
+				if (typeof logs !== "string" || !tail) return untrustedLog(body);
+				return untrustedLog(stripTerminalCodes(logs).split("\n").slice(-tail).join("\n"));
 			});
 		},
 	},
 	{
 		name: "get_metrics",
-		description: "History of CPU, RAM, storage and network usage of the application.",
+		description: "History of CPU, RAM, storage and network usage of the application. `events` lists the restarts, automatic restarts and crashes in the period, each with the exact moment (`at`), the `kind` (restart, auto_restart or crash) and `out_of_memory` (true when it ran out of memory).",
 		group: "apps",
 		route: ["GET", "/v1/apps/:id/metrics"],
 		annotations: R,
@@ -151,7 +151,7 @@ export const appsTools: ToolDefinition[] = [
 	{
 		name: "create_app",
 		description:
-			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. Instead of `path`, `snapshot_id` creates the application from a snapshot of an application (`memory` and `main` are not needed, and `path` must be left out); the answer is then 202 with `restore_job_id`: the app exists and its files come back in the background, so follow that job with `get_snapshot_job` (scope `applications`, `resource_id` = the new app's id) until it is ready. If the restore fails, an application of code is deleted by the API, while an application on a custom image is kept as it is: tell the user the restore failed. A 400 SNAPSHOT_EXCEEDS_STORAGE (`details.required_bytes`, `details.available_bytes`) means the snapshot does not fit in the chosen memory.",
+			"Creates an application from a folder on the computer: compresses the folder (ignoring node_modules, .git and whatever is in .vertraignore) and uploads it. Asynchronous: returns right away with the app in status \"building\"; install and build continue in the background. Call `wait_for_app` (or `get_app` / `get_app_status`) until the status is \"up\" or \"down\"; if \"down\", `last_build_error` has the code and `get_logs` the detail. " + BUILD_ERROR_HINT + " While it builds, restart/start/stop/deploy/rollback return 409 APP_BUILDING. Accounts without a plan get PLAN_REQUIRED: a paid plan is needed first. Instead of `path`, `snapshot_id` creates the application from a snapshot of an application (`memory` and `main` are not needed, and `path` must be left out); the answer is then 202 with `restore_job_id`: the app exists and its files come back in the background, so follow that job with `get_snapshot_job` (scope `applications`, `resource_id` = the new app's id) until it is ready. If the restore fails, an application of code is deleted by the API, while an application on a custom image is kept as it is: tell the user the restore failed. A 400 SNAPSHOT_EXCEEDS_STORAGE (`details.required_bytes`, `details.available_bytes`) means the snapshot does not fit in the chosen memory. `auto_restart` (default on) keeps the app restarting by itself after a crash; set false to leave a crashed app stopped.",
 		group: "apps",
 		route: ["POST", "/v1/apps"],
 		local: true,
@@ -167,6 +167,7 @@ export const appsTools: ToolDefinition[] = [
 			subdomain: z.string().optional(),
 			start: z.string().optional().describe("Custom start command"),
 			build: z.string().optional().describe("Build command, run after install"),
+			auto_restart: z.boolean().optional().describe("Restart the app by itself when it crashes (default: on)"),
 			workspace_id: z.string().optional(),
 		},
 		handler: (args, client) =>
@@ -190,6 +191,7 @@ export const appsTools: ToolDefinition[] = [
 					form.append("version", str(args.version) ?? "recommended");
 				}
 				form.append("name", String(args.name));
+				if (args.auto_restart !== undefined) form.append("auto_restart", String(Boolean(args.auto_restart)));
 				for (const field of ["description", "subdomain", "start", "build", "workspace_id"] as const) {
 					const value = str(args[field]);
 					if (value) form.append(field, value);
@@ -230,7 +232,7 @@ export const appsTools: ToolDefinition[] = [
 	},
 	{
 		name: "update_app_config",
-		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime \"on\" and auto rollback depend on the plan; `list_plans` shows which plans have them (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK).",
+		description: "Changes the application's configuration: name, memory, main file, runtime version, start command, build command, automatic restart after a crash (`auto_restart`, changes without recreating or reinstalling) and deploy behavior (`zero_downtime`, `auto_rollback`, `health_check_path`). Zero downtime \"on\" and auto rollback depend on the plan; `list_plans` shows which plans have them (PLAN_DOES_NOT_SUPPORT_ZERO_DOWNTIME / PLAN_DOES_NOT_SUPPORT_AUTO_ROLLBACK).",
 		group: "apps",
 		route: ["PATCH", "/v1/apps/:id/config"],
 		annotations: DI,
@@ -243,6 +245,7 @@ export const appsTools: ToolDefinition[] = [
 			version: z.string().optional(),
 			start: z.string().optional(),
 			build: z.string().optional().describe("Build command; empty string removes it"),
+			auto_restart: z.boolean().optional().describe("Restart the app by itself when it crashes (default: on)"),
 			zero_downtime: z.enum(["auto", "on", "off"]).optional().describe("Deploy without downtime: auto, on or off"),
 			auto_rollback: z.boolean().optional().describe("Automatically roll back a deploy that fails to start"),
 			health_check_path: z
@@ -260,6 +263,7 @@ export const appsTools: ToolDefinition[] = [
 			// discard the field and fail with "no field provided".
 			const body: RESTPatchAPIApplicationUpdateConfigBody = {
 				...pick(args, ["name", "description", "version"]),
+				...(args.auto_restart !== undefined ? { auto_restart: Boolean(args.auto_restart) } : {}),
 				...(args.memory !== undefined ? { ram: Number(args.memory) } : {}),
 				...(args.main !== undefined ? { main_file: String(args.main) } : {}),
 				...(args.start !== undefined ? { start_command: String(args.start) } : {}),
