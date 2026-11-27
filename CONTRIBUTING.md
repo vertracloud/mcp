@@ -5,10 +5,10 @@ Thanks for your interest. This package is a thin layer over the Vertra Cloud pub
 ## Running it
 
 ```bash
-npm install
-npm run check   # types
-npm test        # vitest
-npm run build
+pnpm install
+pnpm run check   # types
+pnpm test        # vitest
+pnpm run build
 ```
 
 ## Before opening a PR
@@ -17,7 +17,7 @@ npm run build
 - Declare `readOnlyHint`, `destructiveHint` and `idempotentHint`. Confirming with the human is the MCP client's job; the server never asks "are you sure?".
 - API errors pass through intact (`{ code, message?, details? }`) with `isError: true`.
 - No secrets in a tool result. An environment variable's value is never returned.
-- After touching the registry, run `npm run docs:tools` to regenerate the README table.
+- After touching the registry, run `pnpm run docs:tools` to regenerate the README table.
 - A bug fix comes with the test that used to fail.
 
 ## Tests

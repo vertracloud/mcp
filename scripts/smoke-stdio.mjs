@@ -1,4 +1,4 @@
-/** Boots the compiled server and checks the MCP handshake. `npm run build && node scripts/smoke-stdio.mjs`. */
+/** Boots the compiled server and checks the MCP handshake. `pnpm run build && node scripts/smoke-stdio.mjs`. */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 

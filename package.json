@@ -46,9 +46,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "docs:tools": "tsx scripts/gen-readme-tools.ts",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "smoke": "node scripts/smoke-stdio.mjs"
   },
+  "packageManager": "pnpm@10.34.9",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
     "@vertracloud/api-types": "0.7.12",
@@ -62,5 +63,10 @@
     "tsx": "^4.23.1",
     "typescript": "^5.7.2",
     "vitest": "^4.1.11"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

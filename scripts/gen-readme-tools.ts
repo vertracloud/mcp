@@ -1,4 +1,4 @@
-/** Generates the README's tools table from the registry. `npm run docs:tools`. */
+/** Generates the README's tools table from the registry. `pnpm run docs:tools`. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { type ToolGroup, toolScope, tools } from "../src/tools/index.js";
